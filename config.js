@@ -3,12 +3,12 @@
 // Dán cấu hình Firebase vào => app chạy THẬT, nhiều người dùng chung, admin xem được tất cả.
 window.APP_CONFIG = {
   firebase: {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: ""
+    apiKey: "AIzaSyB09C5hCb9O1OOqY7zX1MNw7ZMhyxoHnNQ",
+    authDomain: "thoigianbieu-8bbfb.firebaseapp.com",
+    projectId: "thoigianbieu-8bbfb",
+    storageBucket: "thoigianbieu-8bbfb.firebasestorage.app",
+    messagingSenderId: "148691409052",
+    appId: "1:148691409052:web:9c1f576071fa089c5df559"
   },
 
   APP_NAME: "Thời Gian Biểu",
