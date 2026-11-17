@@ -60,6 +60,11 @@ label{display:block;font-size:13px;color:var(--mut);font-weight:600;margin-botto
 input,textarea{width:100%;margin-top:6px;padding:13px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--txt);font:inherit;font-size:16px;outline:none;transition:border-color .2s,box-shadow .2s}
 input:focus,textarea:focus{border-color:var(--pri2);box-shadow:0 0 0 4px rgba(123,92,255,.25)}
 textarea{resize:none}
+select{width:100%;margin-top:6px;padding:12px 10px;border-radius:14px;border:1px solid var(--line);background:#221a4d;color:var(--txt);font:inherit;font-size:15px;outline:none}
+select:disabled{opacity:.6}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.time .sm{font-size:10.5px;opacity:.8}
+.empty{min-height:46px}
 .chip{display:inline-block;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:99px;vertical-align:middle;letter-spacing:.3px}
 .chip.adm{background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff}
 .chip.ok{background:rgba(34,197,94,.2);color:#86efac}.chip.pend{background:rgba(245,158,11,.2);color:#fcd34d}.chip.no{background:rgba(239,68,68,.2);color:#fca5a5}
@@ -132,7 +137,7 @@ h1.big{font-size:34px;font-weight:900;margin:8px 0 4px}
 .time.now{color:#fff}
 .nowpill{font-size:8.5px;font-weight:900;background:var(--pri1);color:#fff;padding:2px 5px;border-radius:6px;animation:blink 1.2s ease-in-out infinite}
 @keyframes blink{50%{opacity:.45}}
-.empty{flex:1;min-height:58px;border:1.5px dashed rgba(255,255,255,.2);background:transparent;border-radius:16px;padding:12px 14px;color:var(--mut);display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;text-align:left;transition:all .25s}
+.empty{flex:1;min-height:46px;border:1.5px dashed rgba(255,255,255,.2);background:transparent;border-radius:16px;padding:12px 14px;color:var(--mut);display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;text-align:left;transition:all .25s}
 .empty .plus{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:rgba(255,255,255,.08);font-weight:900;transition:all .3s}
 .empty:active,.empty:hover{border-color:var(--pri1);color:#fff;background:rgba(255,78,205,.08)}
 .empty:active .plus,.empty:hover .plus{background:linear-gradient(135deg,var(--pri1),var(--pri2));transform:rotate(90deg)}
@@ -243,7 +248,7 @@ h1.big{font-size:34px;font-weight:900;margin:8px 0 4px}
 .gridwrap{overflow-x:auto;margin:0 -16px;padding:0 16px 6px}
 table.gt{border-collapse:separate;border-spacing:3px;font-size:11px;min-width:560px;width:100%;table-layout:fixed}
 .gt th{font-weight:800;color:var(--mut);padding:4px 2px}
-.gt th.h{text-align:right;width:34px}
+.gt th.h{text-align:right;width:44px;font-size:10px}
 .gt td{background:rgba(255,255,255,.04);border-radius:9px;height:44px;vertical-align:top;padding:4px;border:1px solid transparent;max-width:70px}
 .gt td small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;font-weight:600}
 .gt td.done{background:rgba(34,197,94,.28);border-color:rgba(34,197,94,.6)}
@@ -278,7 +283,7 @@ table.gt{border-collapse:separate;border-spacing:3px;font-size:11px;min-width:56
    ===================================================================== */
 const C = Object.assign({
   APP_NAME:'Thời Gian Biểu', ADMIN_USERNAME:'admin', EMAIL_DOMAIN:'tgb.app',
-  FINE_AMOUNT:10000, GRACE_MINUTES:60, START_HOUR:5, END_HOUR:24
+  FINE_AMOUNT:10000, GRACE_MINUTES:60, START_HOUR:4, END_HOUR:24, SLOT_MINUTES:30
 }, window.APP_CONFIG || {});
 C.ADMIN_USERNAME = C.ADMIN_USERNAME.toLowerCase();
 const HOUR = 3600e3, MIN = 60e3, DAY = 864e5;
@@ -306,10 +311,28 @@ const COLORS = ['#ff4ecd','#7b5cff','#22d3ee','#f59e0b','#22c55e','#f97316','#e1
 const QUOTES = ['Việc hôm nay chớ để ngày mai.','Mỗi ô xanh là một bước tiến.','Làm ít mà chắc, còn hơn hứa nhiều.','Kỷ luật hôm nay, nhẹ nhàng ngày mai.','Tick xanh cho ví khỏi mỏng 💚','Nói ít, làm nhiều, làm đến nơi.'];
 const CHEERS = ['Tuyệt vời! 🔥','Xuất sắc! ⭐','Quá đỉnh! 🚀','Giữ phong độ nhé! 💪','Thêm một ô xanh! 💚','Làm tốt lắm! 👏'];
 
+/* --- khung giờ theo phút (mặc định 30 phút/ô) --- */
+const SLOT = C.SLOT_MINUTES;
+const DAY_START = C.START_HOUR * 60, DAY_END = C.END_HOUR * 60;
+const smOf = t => t.sm ?? t.hour * 60;                 // phút bắt đầu trong ngày
+const durOf = t => t.dur ?? 60;                         // thời lượng (phút)
+const endOf = t => t.end ?? (t.start + durOf(t) * MIN); // thời điểm kết thúc (ms)
+const minMs = (d, m) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), 0, m).getTime();
+const fmtHM = m => `${pad(Math.floor(m / 60))}:${pad(m % 60)}`;
+const durLabel = m => m < 60 ? `${m} phút` : `${Math.floor(m / 60)} giờ${m % 60 ? ' ' + (m % 60) : ''}`;
+const rangeOf = t => `${fmtHM(smOf(t))} – ${fmtHM(smOf(t) + durOf(t))}`;
+// có trùng giờ với việc khác trong ngày không
+const overlaps = (tasks, date, sm, dur, exceptId) => tasks.some(t => t.date === date && t.id !== exceptId && smOf(t) < sm + dur && sm < smOf(t) + durOf(t));
+// thời lượng tối đa còn trống tính từ phút sm
+function maxFree(tasks, date, sm, exceptId) {
+  const next = tasks.filter(t => t.date === date && t.id !== exceptId && smOf(t) >= sm + 1).reduce((a, t) => Math.min(a, smOf(t)), DAY_END);
+  return Math.max(0, Math.min(next, DAY_END) - sm);
+}
+
 function status(t, now = Date.now()) {
   if (t.done) return 'done';
   if (now < t.start) return 'upcoming';
-  if (now < t.start + HOUR) return 'active';
+  if (now < endOf(t)) return 'active';
   if (now < t.deadline) return 'grace';
   return 'failed';
 }
@@ -452,7 +475,7 @@ async function makeFirebase() {
   const { doc, getDoc, setDoc, getDocs, collection, addDoc, updateDoc, deleteDoc, Timestamp } = FS;
   const email = u => `${u}@${C.EMAIL_DOMAIN}`;
   const toMs = v => v && typeof v.toMillis === 'function' ? v.toMillis() : v;
-  const normT = d => { const x = d.data(); return { ...x, id:d.id, start:toMs(x.start), deadline:toMs(x.deadline) }; };
+  const normT = d => { const x = d.data(); return { ...x, id:d.id, start:toMs(x.start), end:toMs(x.end), deadline:toMs(x.deadline) }; };
   const mkUser = (uid, d) => ({ uid, ...d, isAdmin:d.username === C.ADMIN_USERNAME });
   let pendingName = null;
   return {
@@ -480,10 +503,10 @@ async function makeFirebase() {
     async listTasks(uid) { const s = await getDocs(collection(db, 'users', uid, 'tasks')); return s.docs.map(normT); },
     async addTask(uid, t) {
       const { id, ...rest } = t;
-      const r = await addDoc(collection(db, 'users', uid, 'tasks'), { ...rest, start:Timestamp.fromMillis(t.start), deadline:Timestamp.fromMillis(t.deadline), createdAt:Date.now() });
+      const r = await addDoc(collection(db, 'users', uid, 'tasks'), { ...rest, start:Timestamp.fromMillis(t.start), end:Timestamp.fromMillis(t.end), deadline:Timestamp.fromMillis(t.deadline), createdAt:Date.now() });
       return r.id;
     },
-    async updateTask(uid, id, p) { await updateDoc(doc(db, 'users', uid, 'tasks', id), p); },
+    async updateTask(uid, id, p) { const q = { ...p }; if (typeof q.deadline === 'number') q.deadline = Timestamp.fromMillis(q.deadline); await updateDoc(doc(db, 'users', uid, 'tasks', id), q); },
     async deleteTask(uid, id) { await deleteDoc(doc(db, 'users', uid, 'tasks', id)); },
     async listPayments(uid) { const s = await getDocs(collection(db, 'users', uid, 'payments')); return s.docs.map(d => ({ ...d.data(), id:d.id })).sort((a, b) => b.createdAt - a.createdAt); },
     async addPayment(uid, p) { const r = await addDoc(collection(db, 'users', uid, 'payments'), p); return r.id; },
@@ -574,7 +597,13 @@ function viewCal() {
   const dayDone = dayTasks.filter(t => t.done).length;
   const canCopy = addDays(ws, 7).getTime() > now;
   let slots = '';
-  for (let h = C.START_HOUR, i = 0; h < C.END_HOUR; h++, i++) slots += slotHTML(dayTasks.find(t => t.hour === h), day, h, now, i);
+  for (let m = DAY_START, i = 0; m < DAY_END; i++) {
+    const t = dayTasks.find(x => smOf(x) === m);
+    if (t) { slots += slotHTML(t, day, m, now, i); m += Math.max(SLOT, durOf(t)); continue; }
+    const cover = dayTasks.find(x => smOf(x) < m && m < smOf(x) + durOf(x));
+    if (cover) { m = smOf(cover) + durOf(cover); continue; }
+    slots += slotHTML(null, day, m, now, i); m += SLOT;
+  }
 
   return `
   <div class="stats">
@@ -591,7 +620,7 @@ function viewCal() {
     <button class="icon-btn" data-a="week" data-v="1" aria-label="Tuần sau">›</button>
   </div>
   <div class="days">${days.map((d, i) => {
-    const ts = wt.filter(t => t.date === dk(d)).sort((a, b) => a.hour - b.hour);
+    const ts = wt.filter(t => t.date === dk(d)).sort((a, b) => smOf(a) - smOf(b));
     return `<button class="day ${i === S.day ? 'on' : ''} ${dk(d) === todayKey ? 'today' : ''}" data-a="day" data-v="${i}">
       <div class="dn">${DOW[i]}</div><div class="dd">${d.getDate()}</div>
       <div class="dots">${ts.slice(0, 5).map(t => `<i class="${status(t, now)}"></i>`).join('')}</div></button>`;
@@ -602,21 +631,21 @@ function viewCal() {
   ${slots}`;
 }
 
-function slotHTML(t, day, h, now, i) {
-  const start = slotMs(day, h), isNow = now >= start && now < start + HOUR;
-  const time = `<div class="time ${isNow ? 'now' : ''}"><b>${pad(h)}:00</b>${isNow ? '<span class="nowpill">BÂY GIỜ</span>' : ''}</div>`;
+function slotHTML(t, day, m, now, i) {
+  const start = minMs(day, m), end = t ? endOf(t) : start + SLOT * MIN, isNow = now >= start && now < end;
+  const time = `<div class="time ${isNow ? 'now' : ''}"><b>${fmtHM(m)}</b>${t && durOf(t) > SLOT ? `<span class="sm">→${fmtHM(m + durOf(t))}</span>` : ''}${isNow ? '<span class="nowpill">BÂY GIỜ</span>' : ''}</div>`;
   if (!t) {
-    return `<div class="slot" style="--i:${i}">${time}${now < start + HOUR
-      ? `<button class="empty" data-a="add" data-d="${dk(day)}" data-h="${h}"><span class="plus">＋</span>Thêm nhiệm vụ</button>`
+    return `<div class="slot" style="--i:${i}">${time}${now < end
+      ? `<button class="empty" data-a="add" data-d="${dk(day)}" data-m="${m}"><span class="plus">＋</span>Thêm nhiệm vụ</button>`
       : `<div class="empty past">—</div>`}</div>`;
   }
   const s = status(t, now);
-  const left = s === 'grace' ? Math.ceil((t.deadline - now) / MIN) : s === 'active' ? Math.ceil((start + HOUR - now) / MIN) : 0;
+  const left = s === 'grace' ? Math.ceil((t.deadline - now) / MIN) : s === 'active' ? Math.ceil((end - now) / MIN) : 0;
   const sub = { done:`✅ Hoàn thành${t.doneAt ? ' lúc ' + fmtT(t.doneAt) : ''}`, failed:`❌ Không hoàn thành · -${money(C.FINE_AMOUNT)}`,
-    grace:`⚠️ Hết giờ! Còn ${left} phút để tick`, active:`⚡ Đang diễn ra · còn ${left} phút`, upcoming:`⏳ ${pad(h)}:00 – ${pad(h + 1)}:00` }[s];
+    grace:`⚠️ Hết giờ! Còn ${left} phút để tick`, active:`⚡ Đang diễn ra · còn ${left} phút`, upcoming:`⏳ ${rangeOf(t)} · ${durLabel(durOf(t))}` }[s];
   const chk = { done:'✓', failed:'✕', upcoming:'🔒', active:'', grace:'' }[s];
   return `<div class="slot" style="--i:${i}">${time}
-    <div class="task ${s} ${S.shake.has(t.id) ? 'shake' : ''} ${S.justDone === t.id ? 'justdone' : ''}" style="--c:${esc(t.color || '#7b5cff')}" data-a="detail" data-id="${esc(t.id)}">
+    <div class="task ${s} ${S.shake.has(t.id) ? 'shake' : ''} ${S.justDone === t.id ? 'justdone' : ''}" style="--c:${esc(t.color || '#7b5cff')};min-height:${Math.max(1, durOf(t) / SLOT) * 50 + (durOf(t) / SLOT - 1) * 8}px" data-a="detail" data-id="${esc(t.id)}">
       <div class="emo">${esc(t.emoji || '📌')}</div>
       <div class="tx"><div class="tt">${esc(t.title)}</div><div class="ts">${sub}</div></div>
       ${s === 'failed' ? `<span class="fine">-${C.FINE_AMOUNT / 1000}k</span>` : ''}
@@ -650,7 +679,7 @@ function viewFund() {
     <div style="font-size:11.5px;color:#666;margin-top:8px">MoMo không cho trang web tự trừ tiền ví. Anh/chị quét mã, chuyển rồi bấm nút trên để admin xác nhận.</div>
   </div>` : debt > 0 ? `<div class="note rise">⏳ Đã báo chuyển ${money(pend)}, đang chờ admin xác nhận.</div>` : ''}
   <div class="sec">❌ Việc không hoàn thành <span class="sm mut">${failed.length}</span></div>
-  ${failed.length ? failed.slice(0, 50).map((t, i) => `<div class="glass li rise" style="--i:${i + 2}"><div class="emo">${esc(t.emoji || '📌')}</div><div class="tx"><div class="tt">${esc(t.title)}</div><div class="ts">${DOW[dowIdx(parseDK(t.date))]} ${fmtD(parseDK(t.date))} · ${pad(t.hour)}:00</div></div><div class="amt" style="color:#fca5a5">-${money(C.FINE_AMOUNT)}</div></div>`).join('') : `<div class="empty-msg">Chưa bỏ lỡ việc nào. Giữ vững nhé! 🏆</div>`}
+  ${failed.length ? failed.slice(0, 50).map((t, i) => `<div class="glass li rise" style="--i:${i + 2}"><div class="emo">${esc(t.emoji || '📌')}</div><div class="tx"><div class="tt">${esc(t.title)}</div><div class="ts">${DOW[dowIdx(parseDK(t.date))]} ${fmtD(parseDK(t.date))} · ${rangeOf(t)}</div></div><div class="amt" style="color:#fca5a5">-${money(C.FINE_AMOUNT)}</div></div>`).join('') : `<div class="empty-msg">Chưa bỏ lỡ việc nào. Giữ vững nhé! 🏆</div>`}
   <div class="sec">🧾 Lịch sử nộp quỹ</div>
   ${S.payments.length ? S.payments.map(p => `<div class="glass li"><div class="tx"><div class="tt">${money(p.amount)}</div><div class="ts">${fmtDT(p.createdAt)}</div></div>${chipOf(p.status)}</div>`).join('') : `<div class="empty-msg">Chưa có lần nộp nào.</div>`}`;
 }
@@ -702,7 +731,7 @@ function viewAdmin() {
 function userSheetHTML() {
   const { uid, week } = S.uv, u = S.admin.find(x => x.uid === uid); if (!u) return '';
   const now = Date.now(), days = [...Array(7)].map((_, i) => addDays(week, i)), wt = weekTasksOf(u.tasks, week);
-  const hours = [...new Set(wt.map(t => t.hour))].sort((a, b) => a - b);
+  const hours = [...new Set(wt.map(smOf))].sort((a, b) => a - b);
   const cnt = s => wt.filter(t => status(t, now) === s).length;
   const debt = Math.max(0, fineOf(u.tasks) - paidOf(u.payments));
   return `<div class="detail-hero"><div class="uava" style="width:56px;height:56px;font-size:20px">${esc(initials(u.displayName))}</div>
@@ -710,8 +739,8 @@ function userSheetHTML() {
   <div class="weeknav"><button class="icon-btn" data-a="uweek" data-v="-1">‹</button><div class="wk glass"><b>${fmtD(days[0])} – ${fmtD(days[6])}</b><span class="sm mut">✅ ${cnt('done')} · ❌ ${cnt('failed')} · ⏳ ${cnt('upcoming') + cnt('active') + cnt('grace')}</span></div><button class="icon-btn" data-a="uweek" data-v="1">›</button></div>
   <div class="legend"><span><i style="background:#22c55e"></i>Hoàn thành</span><span><i style="background:#ef4444"></i>Không hoàn thành</span><span><i style="background:#f59e0b"></i>Đang chờ tick</span><span><i style="background:#7b5cff"></i>Sắp tới</span></div>
   ${hours.length ? `<div class="gridwrap"><table class="gt"><tr><th class="h"></th>${days.map((d, i) => `<th>${DOW[i]}<br><span class="mut">${d.getDate()}</span></th>`).join('')}</tr>
-    ${hours.map(h => `<tr><th class="h">${pad(h)}h</th>${days.map(d => { const t = wt.find(x => x.date === dk(d) && x.hour === h);
-      return t ? `<td class="${status(t, now)}" title="${esc(t.title)}">${esc(t.emoji || '📌')}<small>${esc(t.title)}</small></td>` : '<td></td>'; }).join('')}</tr>`).join('')}
+    ${hours.map(h => `<tr><th class="h">${fmtHM(h)}</th>${days.map(d => { const t = wt.find(x => x.date === dk(d) && smOf(x) === h);
+      return t ? `<td class="${status(t, now)}" title="${esc(t.title)} (${rangeOf(t)})">${esc(t.emoji || '📌')}<small>${esc(t.title)}</small><small class="mut">${durLabel(durOf(t))}</small></td>` : '<td></td>'; }).join('')}</tr>`).join('')}
   </table></div>` : `<div class="empty-msg">Tuần này chưa lên lịch việc nào.</div>`}`;
 }
 
@@ -728,35 +757,69 @@ function closeSheet() {
   setTimeout(() => { $('#modal-root').innerHTML = ''; document.body.classList.remove('lock'); }, 240);
 }
 
-function openTaskForm(date, hour, edit) {
+const GRACE_OPTS = [[30,'30 phút'],[60,'1 giờ'],[120,'2 giờ'],[180,'3 giờ'],[240,'4 giờ'],[360,'6 giờ'],[720,'12 giờ'],['eod','Đến 23:59']];
+function graceMin(v, endMin) { return v === 'eod' ? Math.max(30, 23 * 60 + 59 - endMin) : +v; }
+function openTaskForm(date, sm, edit) {
   const day = parseDK(date), now = Date.now(), wsd = mondayOf(day), di = dowIdx(day);
-  const start = slotMs(day, hour), deadline = start + HOUR + C.GRACE_MINUTES * MIN;
-  const repeat = edit ? '' : `<div class="lbl">Lặp lại cùng khung giờ các ngày trong tuần</div><div class="rep">${DOW.map((n, i) => {
-    const d = addDays(wsd, i), busy = S.tasks.some(t => t.date === dk(d) && t.hour === hour), ok = !busy && now < slotMs(d, hour) + HOUR;
-    return `<label class="${ok ? '' : 'dis'}"><input type="checkbox" name="days" value="${dk(d)}" ${i === di && ok ? 'checked' : ''} ${ok ? '' : 'disabled'}><span>${n}</span></label>`;
-  }).join('')}</div>`;
+  sm = +sm;
+  const maxD = maxFree(S.tasks, date, sm, edit?.id);
+  const curDur = edit ? durOf(edit) : Math.min(60, maxD);
+  const durOpts = [];
+  for (let d = SLOT; d <= maxD; d += SLOT) durOpts.push(d);
+  const curGrace = edit ? Math.round((edit.deadline - endOf(edit)) / MIN) : C.GRACE_MINUTES;
+  const gOpts = GRACE_OPTS.map(([v, l]) => [v, l]);
+  if (edit && !gOpts.some(([v]) => v === curGrace)) gOpts.unshift([curGrace, durLabel(curGrace)]);
+  const repeat = edit ? '' : `<div class="lbl">Lặp lại cùng giờ các ngày trong tuần</div><div class="rep" id="repBox">${repBoxHTML(wsd, di, sm, curDur, now)}</div>`;
   openSheet(`<h3>${edit ? '✏️ Sửa nhiệm vụ' : '✨ Nhiệm vụ mới'}</h3>
-  <div class="sm mut" style="margin-bottom:16px">${DOWF[di]} ${fmtD(day)} · ${pad(hour)}:00 – ${pad(hour + 1)}:00</div>
-  <form id="taskForm" data-date="${date}" data-hour="${hour}" data-edit="${edit ? esc(edit.id) : ''}">
-    <label>Tên công việc<input name="title" required maxlength="60" value="${esc(edit?.title || '')}" placeholder="VD: Họp giao ban, đọc tài liệu..."></label>
+  <div class="sm mut" style="margin-bottom:16px">${DOWF[di]} ${fmtD(day)} · bắt đầu ${fmtHM(sm)}</div>
+  <form id="taskForm" data-date="${date}" data-sm="${sm}" data-edit="${edit ? esc(edit.id) : ''}">
+    <label>Tên công việc<input name="title" required maxlength="60" value="${esc(edit?.title || '')}" placeholder="VD: Học thêm, họp giao ban..."></label>
+    <div class="row2">
+      <label>Thời lượng<select name="dur" ${edit ? 'disabled' : ''}>${durOpts.map(d => `<option value="${d}" ${d === curDur ? 'selected' : ''}>${durLabel(d)} (đến ${fmtHM(sm + d)})</option>`).join('')}</select></label>
+      <label>Hạn tick sau khi xong<select name="grace">${gOpts.map(([v, l]) => `<option value="${v}" ${v === curGrace ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+    </div>
     <div class="lbl">Biểu tượng</div>
     <div class="emos">${EMOJIS.map((e, i) => `<label><input type="radio" name="emoji" value="${e}" ${(edit ? edit.emoji === e : i === 0) ? 'checked' : ''}><span>${e}</span></label>`).join('')}</div>
     <div class="lbl">Màu nhãn</div>
     <div class="cols">${COLORS.map((c, i) => `<label style="color:${c}"><input type="radio" name="color" value="${c}" ${(edit ? edit.color === c : i === 1) ? 'checked' : ''}><span style="background:${c}"></span></label>`).join('')}</div>
     <label>Ghi chú (không bắt buộc)<textarea name="note" rows="2" maxlength="200">${esc(edit?.note || '')}</textarea></label>
     ${repeat}
-    <div class="warnbox">⚠️ Phải bấm tick hoàn thành trong khung giờ, chậm nhất <b>${fmtT(deadline)}</b>. Không tick → ô chuyển đỏ và mất <b>${money(C.FINE_AMOUNT)}</b> vào quỹ.<br>Khi khung giờ đã bắt đầu thì <b>không xoá, không sửa</b> được nữa.</div>
+    <div class="warnbox" id="dlBox"></div>
     <button class="btn full" type="submit">${edit ? 'Lưu thay đổi' : 'Thêm vào lịch 🎯'}</button>
   </form>`);
-  setTimeout(() => $('#taskForm input[name=title]')?.focus(), 450);
+  updateDeadlineBox();
+  if (!edit) setTimeout(() => $('#taskForm input[name=title]')?.focus(), 450);
 }
+function repBoxHTML(wsd, di, sm, dur, now) {
+  return DOW.map((n, i) => {
+    const d = addDays(wsd, i), ok = !overlaps(S.tasks, dk(d), sm, dur) && now < minMs(d, sm + dur);
+    return `<label class="${ok ? '' : 'dis'}"><input type="checkbox" name="days" value="${dk(d)}" ${i === di && ok ? 'checked' : ''} ${ok ? '' : 'disabled'}><span>${n}</span></label>`;
+  }).join('');
+}
+function updateDeadlineBox() {
+  const f = $('#taskForm'); if (!f) return;
+  const sm = +f.dataset.sm, dur = +f.dur.value, endMin = sm + dur, g = graceMin(f.grace.value, endMin);
+  const dlMin = endMin + g, next = dlMin >= 1440;
+  $('#dlBox').innerHTML = `⏰ Tick được từ <b>${fmtHM(sm)}</b> đến chậm nhất <b>${fmtHM(dlMin % 1440)}${next ? ' hôm sau' : ''}</b>. Quá hạn không tick → ô chuyển đỏ, mất <b>${money(C.FINE_AMOUNT)}</b>.<br>Khi việc đã bắt đầu thì <b>không xoá, không sửa</b> được nữa.`;
+}
+document.addEventListener('change', e => {
+  const f = e.target.closest('#taskForm'); if (!f) return;
+  if (e.target.name === 'dur' && $('#repBox')) {
+    const day = parseDK(f.dataset.date);
+    const keep = new Set([...f.querySelectorAll('input[name=days]:checked')].map(x => x.value));
+    $('#repBox').innerHTML = repBoxHTML(mondayOf(day), dowIdx(day), +f.dataset.sm, +f.dur.value, Date.now());
+    f.querySelectorAll('input[name=days]').forEach(x => { if (!x.disabled) x.checked = keep.has(x.value); });
+  }
+  updateDeadlineBox();
+});
 
 function openDetail(t) {
   const s = status(t), now = Date.now(), d = parseDK(t.date);
   const label = { done:'<span class="chip ok">HOÀN THÀNH</span>', failed:'<span class="chip no">KHÔNG HOÀN THÀNH</span>', grace:'<span class="chip pend">CHỜ TICK</span>', active:'<span class="chip pend">ĐANG DIỄN RA</span>', upcoming:'<span class="chip" style="background:rgba(123,92,255,.25)">SẮP TỚI</span>' }[s];
   openSheet(`<div class="detail-hero"><div class="emo" style="background:${esc(t.color)}33">${esc(t.emoji || '📌')}</div><div><h3>${esc(t.title)}</h3>${label}</div></div>
-    <div class="kv"><span>Thời gian</span><b>${DOWF[dowIdx(d)]} ${fmtD(d)} · ${pad(t.hour)}:00 – ${pad(t.hour + 1)}:00</b></div>
-    <div class="kv"><span>Hạn tick</span><b>${fmtT(t.deadline)}</b></div>
+    <div class="kv"><span>Thời gian</span><b>${DOWF[dowIdx(d)]} ${fmtD(d)} · ${rangeOf(t)}</b></div>
+    <div class="kv"><span>Thời lượng</span><b>${durLabel(durOf(t))}</b></div>
+    <div class="kv"><span>Hạn tick</span><b>${fmtDT(t.deadline)}</b></div>
     ${t.doneAt ? `<div class="kv"><span>Hoàn thành lúc</span><b>${fmtDT(t.doneAt)}</b></div>` : ''}
     ${s === 'failed' ? `<div class="kv"><span>Tiền phạt</span><b style="color:#fca5a5">-${money(C.FINE_AMOUNT)}</b></div>` : ''}
     ${t.note ? `<div style="margin-top:12px;padding:12px;border-radius:12px;background:var(--card);font-size:14px;line-height:1.5">${esc(t.note)}</div>` : ''}
@@ -778,9 +841,9 @@ const A = {
   tab(el) { S.tab = el.dataset.v; S.animate = true; if (S.tab === 'admin') S.admin = null; render(); scrollTo({ top:0, behavior:'smooth' }); },
   week(el) { const v = +el.dataset.v; S.week = v ? addDays(S.week, 7 * v) : mondayOf(new Date()); if (!v) S.day = dowIdx(new Date()); S.animate = true; render(); },
   day(el) { S.day = +el.dataset.v; S.animate = true; render(); },
-  add(el) { openTaskForm(el.dataset.d, +el.dataset.h); },
+  add(el) { openTaskForm(el.dataset.d, +el.dataset.m); },
   detail(el) { const t = S.tasks.find(x => x.id === el.dataset.id); if (t) openDetail(t); },
-  editTask(el) { const t = S.tasks.find(x => x.id === el.dataset.id); if (t) openTaskForm(t.date, t.hour, t); },
+  editTask(el) { const t = S.tasks.find(x => x.id === el.dataset.id); if (t) openTaskForm(t.date, smOf(t), t); },
   async delTask(el) {
     const t = S.tasks.find(x => x.id === el.dataset.id); if (!t) return;
     if (Date.now() >= t.start) return toast('Khung giờ đã bắt đầu, không xoá được', 'bad');
@@ -791,7 +854,7 @@ const A = {
   async tick(el) {
     const t = S.tasks.find(x => x.id === el.dataset.id); if (!t) return;
     const s = status(t);
-    if (s === 'upcoming') { buzz(40); return toast(`🔒 Chưa đến giờ – mở tick lúc ${pad(t.hour)}:00`, 'warn'); }
+    if (s === 'upcoming') { buzz(40); return toast(`🔒 Chưa đến giờ – mở tick lúc ${fmtHM(smOf(t))}`, 'warn'); }
     if (s === 'failed') { buzz([40, 40, 40]); return toast('Đã quá hạn tick ❌', 'bad'); }
     if (s === 'done' && Date.now() >= t.deadline) return toast('Đã chốt, không bỏ tick được', 'warn');
     const nd = !t.done, r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
@@ -814,9 +877,9 @@ const A = {
     if (!confirm(`Chép ${src.length} nhiệm vụ của tuần trước sang tuần đang xem?\n(Bỏ qua khung giờ đã qua hoặc đã có việc)`)) return;
     let n = 0;
     for (const s of src) {
-      const d = addDays(parseDK(s.date), 7), date = dk(d), start = slotMs(d, s.hour);
-      if (now >= start + HOUR || S.tasks.some(t => t.date === date && t.hour === s.hour)) continue;
-      const t = { title:s.title, emoji:s.emoji, color:s.color, note:s.note || '', date, hour:s.hour, start, deadline:start + HOUR + C.GRACE_MINUTES * MIN, done:false, doneAt:null };
+      const d = addDays(parseDK(s.date), 7), date = dk(d), sm = smOf(s), dur = durOf(s);
+      if (now >= minMs(d, sm + dur) || overlaps(S.tasks, date, sm, dur)) continue;
+      const t = makeTask({ title:s.title, emoji:s.emoji, color:s.color, note:s.note || '' }, d, sm, dur, Math.round((s.deadline - endOf(s)) / MIN));
       t.id = await DB.addTask(S.me.uid, t); S.tasks.push(t); n++;
     }
     toast(n ? `📋 Đã chép ${n} nhiệm vụ` : 'Không có khung giờ nào chép được', n ? 'ok' : 'warn');
@@ -844,6 +907,10 @@ async function setPay(el, status) {
   render();
 }
 
+function makeTask(base, day, sm, dur, grace) {
+  const start = minMs(day, sm), end = minMs(day, sm + dur);
+  return { ...base, date:dk(day), sm, dur, hour:Math.floor(sm / 60), start, end, deadline:end + Math.max(SLOT, grace) * MIN, done:false, doneAt:null };
+}
 const FORMS = {
   async authForm(f, fd) {
     const u = String(fd.get('u') || '').trim().toLowerCase(), p = String(fd.get('p') || '');
@@ -855,22 +922,24 @@ const FORMS = {
   async taskForm(f, fd) {
     const title = String(fd.get('title') || '').trim(); if (!title) return;
     const base = { title, emoji:fd.get('emoji') || '📌', color:fd.get('color') || COLORS[1], note:String(fd.get('note') || '').trim() };
-    const hour = +f.dataset.hour;
+    const sm = +f.dataset.sm, graceV = fd.get('grace');
     if (f.dataset.edit) {
       const t = S.tasks.find(x => x.id === f.dataset.edit);
-      if (!t || Date.now() >= t.start) return toast('Khung giờ đã bắt đầu, không sửa được', 'bad');
-      await DB.updateTask(S.me.uid, t.id, base); Object.assign(t, base); toast('Đã cập nhật ✏️');
+      if (!t || Date.now() >= t.start) return toast('Việc đã bắt đầu, không sửa được', 'bad');
+      const patch = { ...base, deadline:endOf(t) + graceMin(graceV, smOf(t) + durOf(t)) * MIN };
+      await DB.updateTask(S.me.uid, t.id, patch); Object.assign(t, patch); toast('Đã cập nhật ✏️');
     } else {
-      const dates = fd.getAll('days');
+      const dur = +fd.get('dur'), dates = fd.getAll('days');
+      if (!dur) return toast('Khung giờ này không còn trống', 'bad');
       if (!dates.length) return toast('Chọn ít nhất 1 ngày', 'bad');
+      let n = 0;
       for (const d of dates) {
-        if (S.tasks.some(t => t.date === d && t.hour === hour)) continue;
-        const start = slotMs(parseDK(d), hour);
-        if (Date.now() >= start + HOUR) continue;
-        const t = { ...base, date:d, hour, start, deadline:start + HOUR + C.GRACE_MINUTES * MIN, done:false, doneAt:null };
-        t.id = await DB.addTask(S.me.uid, t); S.tasks.push(t);
+        const day = parseDK(d);
+        if (overlaps(S.tasks, d, sm, dur) || Date.now() >= minMs(day, sm + dur)) continue;
+        const t = makeTask(base, day, sm, dur, graceMin(graceV, sm + dur));
+        t.id = await DB.addTask(S.me.uid, t); S.tasks.push(t); n++;
       }
-      toast(`🎯 Đã thêm ${dates.length} nhiệm vụ`); burst(innerWidth / 2, innerHeight * .6, 45);
+      toast(`🎯 Đã thêm ${n} nhiệm vụ`); burst(innerWidth / 2, innerHeight * .6, 45);
     }
     closeSheet(); render();
   },
