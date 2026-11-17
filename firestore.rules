@@ -1,0 +1,61 @@
+rules_version = '2';
+// LUẬT BẢO MẬT FIRESTORE – dán toàn bộ vào Firebase Console > Firestore Database > Rules > Publish
+// Lưu ý: nếu đổi ADMIN_USERNAME, EMAIL_DOMAIN hoặc GRACE_MINUTES trong config.js thì sửa tương ứng ở đây.
+//   - Email admin = ADMIN_USERNAME@EMAIL_DOMAIN  (mặc định admin@tgb.app)
+//   - Hạn tick = giờ bắt đầu + 60 phút khung giờ + GRACE_MINUTES (mặc định 60 + 60 = 120 phút)
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+    function isAdmin() { return signedIn() && request.auth.token.email == 'admin@tgb.app'; }
+    function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
+
+    // Cài đặt quỹ (mã QR MoMo, tên, số điện thoại): ai đăng nhập cũng xem được, chỉ admin sửa
+    match /settings/{id} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    match /users/{uid} {
+      allow read: if isOwner(uid) || isAdmin();
+      // Tên đăng nhập trong hồ sơ phải trùng với email đăng nhập (chống tự xưng admin)
+      allow create: if isOwner(uid)
+        && request.resource.data.username == request.auth.token.email.split('@')[0];
+      allow update: if (isOwner(uid) && request.resource.data.username == resource.data.username) || isAdmin();
+
+      // Nhiệm vụ
+      match /tasks/{taskId} {
+        allow read: if isOwner(uid) || isAdmin();
+
+        // Chỉ được tạo việc cho khung giờ chưa kết thúc; hạn tick cố định; mặc định chưa xong
+        allow create: if isOwner(uid)
+          && request.resource.data.start is timestamp
+          && request.resource.data.start > request.time - duration.value(1, 'h')
+          && request.resource.data.deadline == request.resource.data.start + duration.value(120, 'm')
+          && request.resource.data.done == false;
+
+        // Sửa/tick: trước hạn chót; không được đổi giờ, hạn; chỉ tick khi đã đến giờ
+        allow update: if isOwner(uid)
+          && request.time < resource.data.deadline
+          && request.resource.data.start == resource.data.start
+          && request.resource.data.deadline == resource.data.deadline
+          && request.resource.data.date == resource.data.date
+          && request.resource.data.hour == resource.data.hour
+          && (request.resource.data.done == resource.data.done || request.time >= resource.data.start);
+
+        // Chỉ xoá được khi khung giờ chưa bắt đầu (admin xoá được mọi lúc)
+        allow delete: if (isOwner(uid) && request.time < resource.data.start) || isAdmin();
+      }
+
+      // Báo nộp quỹ: người dùng chỉ tạo ở trạng thái chờ duyệt; chỉ admin xác nhận/từ chối
+      match /payments/{payId} {
+        allow read: if isOwner(uid) || isAdmin();
+        allow create: if isOwner(uid)
+          && request.resource.data.status == 'pending'
+          && request.resource.data.amount is number
+          && request.resource.data.amount > 0;
+        allow update, delete: if isAdmin();
+      }
+    }
+  }
+}

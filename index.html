@@ -1,0 +1,961 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#0b0820">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Thời Gian Biểu">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" href="icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icon-192.png">
+<title>Thời Gian Biểu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+@property --a{syntax:'<angle>';initial-value:0deg;inherits:false}
+:root{
+  --bg:#0b0820;--bg2:#1a1340;--card:rgba(255,255,255,.065);--line:rgba(255,255,255,.13);
+  --txt:#f4f1ff;--mut:#a8a2cc;--pri1:#ff4ecd;--pri2:#7b5cff;--pri3:#22d3ee;
+  --ok:#22c55e;--bad:#ef4444;--warn:#f59e0b;--r:18px
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt);font-family:'Be Vietnam Pro',system-ui,-apple-system,sans-serif;min-height:100%}
+body{padding-bottom:calc(96px + env(safe-area-inset-bottom));overscroll-behavior-y:none}
+body.lock{overflow:hidden}
+button{font:inherit;color:inherit;cursor:pointer}
+.bg{position:fixed;inset:0;overflow:hidden;z-index:-1}
+.blob{position:absolute;width:60vmax;height:60vmax;border-radius:50%;filter:blur(90px);opacity:.42;animation:float 18s ease-in-out infinite alternate}
+.b1{background:#7b5cff;top:-22vmax;left:-18vmax}
+.b2{background:#ff4ecd;bottom:-28vmax;right:-22vmax;animation-delay:-6s}
+.b3{background:#22d3ee;top:35%;left:35%;width:38vmax;height:38vmax;opacity:.22;animation-delay:-12s}
+.stars{position:absolute;inset:0;background-image:radial-gradient(1px 1px at 20% 30%,#fff8,transparent),radial-gradient(1px 1px at 70% 20%,#fff6,transparent),radial-gradient(1.5px 1.5px at 40% 80%,#fff7,transparent),radial-gradient(1px 1px at 85% 65%,#fff5,transparent),radial-gradient(1px 1px at 10% 70%,#fff6,transparent),radial-gradient(1.5px 1.5px at 55% 45%,#fff4,transparent);animation:twinkle 5s ease-in-out infinite alternate}
+@keyframes twinkle{to{opacity:.35}}
+@keyframes float{0%{transform:translate(0,0) scale(1)}50%{transform:translate(8vmax,-6vmax) scale(1.15)}100%{transform:translate(-6vmax,6vmax) scale(.9)}}
+#fx{position:fixed;inset:0;width:100vw;height:100vh;pointer-events:none;z-index:999}
+.wrap{max-width:560px;margin:0 auto;padding:calc(14px + env(safe-area-inset-top)) 14px 16px}
+.glass{background:var(--card);border:1px solid var(--line);backdrop-filter:blur(16px);-webkit-backdrop-filter:blur(16px);border-radius:var(--r)}
+.card{padding:16px}
+.mut{color:var(--mut)}.sm{font-size:12.5px}.b{font-weight:800}
+.grad{background:linear-gradient(90deg,var(--pri1),var(--pri2),var(--pri3),var(--pri1));background-size:300% 100%;-webkit-background-clip:text;background-clip:text;color:transparent;animation:shine 6s linear infinite}
+@keyframes shine{to{background-position:300% 0}}
+h1,h2,h3{margin:0}
+h3{font-size:20px;margin-bottom:4px}
+.btn{border:0;border-radius:14px;padding:14px 18px;font-weight:800;color:#fff;background:linear-gradient(135deg,var(--pri1),var(--pri2));box-shadow:0 10px 26px -10px rgba(255,78,205,.8);transition:transform .15s,filter .2s;position:relative;overflow:hidden}
+.btn::after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 35%,rgba(255,255,255,.35) 50%,transparent 65%);transform:translateX(-120%);animation:sweep 3.2s ease-in-out infinite}
+.btn:active{transform:scale(.95)}.btn:disabled{filter:grayscale(.6) brightness(.7)}
+.btn.ghost{background:rgba(255,255,255,.08);border:1px solid var(--line);box-shadow:none}
+.btn.ghost::after,.btn.ok::after,.btn.no::after{display:none}
+.btn.ok{background:linear-gradient(135deg,#16a34a,#22c55e);box-shadow:0 8px 20px -10px #22c55e}
+.btn.no{background:rgba(239,68,68,.18);border:1px solid rgba(239,68,68,.5);box-shadow:none;color:#fca5a5}
+.btn.sm{padding:9px 12px;font-size:13px;border-radius:11px}
+.btn.full{width:100%}
+.icon-btn{width:42px;height:42px;border-radius:14px;border:1px solid var(--line);background:var(--card);display:grid;place-items:center;font-size:18px;transition:transform .15s}
+.icon-btn:active{transform:scale(.9)}
+label{display:block;font-size:13px;color:var(--mut);font-weight:600;margin-bottom:14px}
+.lbl{font-size:13px;color:var(--mut);font-weight:600;margin:0 0 8px}
+input,textarea{width:100%;margin-top:6px;padding:13px 14px;border-radius:14px;border:1px solid var(--line);background:rgba(255,255,255,.06);color:var(--txt);font:inherit;font-size:16px;outline:none;transition:border-color .2s,box-shadow .2s}
+input:focus,textarea:focus{border-color:var(--pri2);box-shadow:0 0 0 4px rgba(123,92,255,.25)}
+textarea{resize:none}
+.chip{display:inline-block;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:99px;vertical-align:middle;letter-spacing:.3px}
+.chip.adm{background:linear-gradient(135deg,#f59e0b,#f97316);color:#fff}
+.chip.ok{background:rgba(34,197,94,.2);color:#86efac}.chip.pend{background:rgba(245,158,11,.2);color:#fcd34d}.chip.no{background:rgba(239,68,68,.2);color:#fca5a5}
+.note{margin-top:14px;font-size:12.5px;color:#fde68a;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.35);border-radius:12px;padding:10px 12px;line-height:1.5}
+.warnbox{font-size:12.5px;color:#fecaca;background:rgba(239,68,68,.12);border:1px solid rgba(239,68,68,.35);border-radius:12px;padding:10px 12px;margin:4px 0 16px;line-height:1.5}
+
+/* ---------- AUTH ---------- */
+.auth{min-height:100vh;display:flex;flex-direction:column;justify-content:center;text-align:center;padding-bottom:40px}
+.logo{font-size:72px;animation:bob 3s ease-in-out infinite;filter:drop-shadow(0 12px 30px rgba(255,78,205,.6))}
+@keyframes bob{0%,100%{transform:translateY(0) rotate(-7deg)}50%{transform:translateY(-12px) rotate(7deg)}}
+h1.big{font-size:34px;font-weight:900;margin:8px 0 4px}
+.auth .card{text-align:left;margin-top:22px;animation:rise .6s .1s both}
+.seg{position:relative;display:grid;grid-template-columns:1fr 1fr;background:rgba(0,0,0,.25);border-radius:14px;padding:4px;margin-bottom:18px}
+.seg button{position:relative;z-index:1;border:0;background:none;padding:11px;font-weight:700;color:var(--mut);transition:color .3s}
+.seg button.on{color:#fff}
+.seg-ind{position:absolute;top:4px;left:4px;width:calc(50% - 4px);height:calc(100% - 8px);border-radius:11px;background:linear-gradient(135deg,var(--pri1),var(--pri2));transition:transform .35s cubic-bezier(.3,1.4,.5,1)}
+
+/* ---------- HEADER ---------- */
+.top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
+.ava{width:50px;height:50px;border-radius:16px;display:grid;place-items:center;font-weight:900;font-size:18px;background:conic-gradient(from var(--a),var(--pri1),var(--pri2),var(--pri3),var(--pri1));animation:spin 6s linear infinite;box-shadow:0 8px 24px -8px var(--pri2);flex:none}
+.hi{flex:1;min-width:0}
+.name{font-weight:800;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lv{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:11.5px;font-weight:800}
+.lv>span:first-child{background:linear-gradient(135deg,#facc15,#f97316);color:#1a1300;padding:1px 7px;border-radius:7px}
+.bar{flex:1;height:7px;border-radius:9px;background:rgba(255,255,255,.1);overflow:hidden;max-width:140px}
+.bar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,var(--pri3),var(--pri2),var(--pri1));animation:grow 1s cubic-bezier(.2,.8,.2,1) both}
+@keyframes grow{from{width:0!important}}
+.quote{font-size:12.5px;color:var(--mut);margin:-4px 0 14px;font-style:italic}
+
+/* ---------- STATS ---------- */
+.stats{display:grid;grid-template-columns:1.25fr 1fr 1fr;gap:10px;margin-bottom:14px}
+.stat{padding:12px;display:flex;flex-direction:column;justify-content:center;gap:2px;position:relative;overflow:hidden}
+.stat .v{font-size:22px;font-weight:900}
+.stat .k{font-size:11.5px;color:var(--mut);font-weight:600}
+.ringbox{display:flex;align-items:center;gap:10px;flex-direction:row}
+.ring{width:58px;height:58px;flex:none}
+.ring circle{fill:none;stroke-width:7}
+.ring .tr{stroke:rgba(255,255,255,.1)}
+.ring .pr{stroke:url(#rg);stroke-linecap:round;stroke-dasharray:163.36;stroke-dashoffset:var(--off);transform:rotate(-90deg);transform-origin:50% 50%;animation:ring 1.2s cubic-bezier(.2,.8,.2,1) both}
+@keyframes ring{from{stroke-dashoffset:163.36}}
+.ring text{fill:#fff;font-size:15px;font-weight:900;text-anchor:middle;dominant-baseline:central}
+.flame{display:inline-block;animation:flick 1s ease-in-out infinite alternate;transform-origin:50% 90%}
+@keyframes flick{to{transform:scale(1.15) rotate(5deg)}}
+.stat.debt{cursor:pointer}
+.stat.debt.has{border-color:rgba(239,68,68,.55);background:linear-gradient(135deg,rgba(239,68,68,.22),rgba(239,68,68,.05))}
+.stat.debt.zero{border-color:rgba(34,197,94,.5);background:linear-gradient(135deg,rgba(34,197,94,.2),rgba(34,197,94,.04))}
+
+/* ---------- WEEK / DAYS ---------- */
+.weeknav{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+.wk{flex:1;text-align:center;padding:8px;border-radius:14px;cursor:pointer}
+.wk b{display:block;font-size:15px}
+.days{display:grid;grid-template-columns:repeat(7,1fr);gap:6px;margin-bottom:16px}
+.day{border:1px solid var(--line);background:var(--card);border-radius:15px;padding:8px 0 7px;text-align:center;color:var(--mut);transition:all .3s cubic-bezier(.3,1.4,.5,1)}
+.day .dn{font-size:11px;font-weight:700}
+.day .dd{font-size:18px;font-weight:900;color:var(--txt)}
+.day.on{background:linear-gradient(160deg,var(--pri1),var(--pri2));color:#fff;transform:translateY(-4px) scale(1.04);box-shadow:0 12px 26px -10px var(--pri1);border-color:transparent}
+.day.today:not(.on){border-color:var(--pri3);box-shadow:0 0 0 1px var(--pri3) inset}
+.dots{display:flex;gap:3px;justify-content:center;height:6px;margin-top:4px}
+.dots i{width:5px;height:5px;border-radius:50%;background:#ffffff55}
+.dots i.done{background:var(--ok)}.dots i.failed{background:var(--bad)}.dots i.grace,.dots i.active{background:var(--warn)}
+.day.on .dots i{box-shadow:0 0 0 1px #fff8}
+.dayhead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:12px}
+.dayhead h2{font-size:19px;font-weight:900}
+.dayprog{height:6px;border-radius:9px;background:rgba(255,255,255,.08);overflow:hidden;margin:-4px 0 16px}
+.dayprog i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),#a3e635);border-radius:9px;transition:width .6s}
+
+/* ---------- SLOTS ---------- */
+.slot{display:flex;gap:10px;align-items:stretch;margin-bottom:9px}
+.time{width:54px;flex:none;display:flex;flex-direction:column;align-items:flex-end;justify-content:center;font-size:13px;color:var(--mut);gap:3px}
+.time.now{color:#fff}
+.nowpill{font-size:8.5px;font-weight:900;background:var(--pri1);color:#fff;padding:2px 5px;border-radius:6px;animation:blink 1.2s ease-in-out infinite}
+@keyframes blink{50%{opacity:.45}}
+.empty{flex:1;min-height:58px;border:1.5px dashed rgba(255,255,255,.2);background:transparent;border-radius:16px;padding:12px 14px;color:var(--mut);display:flex;align-items:center;gap:10px;font-weight:600;font-size:14px;text-align:left;transition:all .25s}
+.empty .plus{width:28px;height:28px;border-radius:9px;display:grid;place-items:center;background:rgba(255,255,255,.08);font-weight:900;transition:all .3s}
+.empty:active,.empty:hover{border-color:var(--pri1);color:#fff;background:rgba(255,78,205,.08)}
+.empty:active .plus,.empty:hover .plus{background:linear-gradient(135deg,var(--pri1),var(--pri2));transform:rotate(90deg)}
+.empty.past{opacity:.28;border-style:solid;min-height:40px;justify-content:center}
+.task{position:relative;flex:1;min-height:58px;padding:11px 12px 11px 16px;border-radius:16px;background:var(--card);border:1px solid var(--line);display:flex;align-items:center;gap:11px;overflow:hidden;cursor:pointer;transition:transform .2s}
+.task:active{transform:scale(.98)}
+.task::before{content:'';position:absolute;left:0;top:9px;bottom:9px;width:4px;border-radius:0 4px 4px 0;background:var(--c)}
+.emo{font-size:24px;width:38px;height:38px;flex:none;border-radius:12px;display:grid;place-items:center;background:rgba(255,255,255,.07)}
+.tx{flex:1;min-width:0}
+.tt{font-weight:700;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ts{font-size:12px;color:var(--mut);margin-top:2px}
+.chk{width:42px;height:42px;flex:none;border-radius:13px;border:2px solid rgba(255,255,255,.3);background:rgba(0,0,0,.15);display:grid;place-items:center;font-size:20px;font-weight:900;transition:all .3s cubic-bezier(.3,1.6,.5,1)}
+.chk.active,.chk.grace{border-color:#fff;animation:nudge 1.6s ease-in-out infinite}
+@keyframes nudge{0%,100%{transform:scale(1)}50%{transform:scale(1.1)}}
+.chk.upcoming{opacity:.5;font-size:15px}
+.chk.done{background:var(--ok);border-color:var(--ok);color:#fff;box-shadow:0 0 18px var(--ok)}
+.chk.failed{background:var(--bad);border-color:var(--bad);color:#fff;opacity:.9}
+.task.done{background:linear-gradient(135deg,rgba(34,197,94,.3),rgba(34,197,94,.07));border-color:rgba(34,197,94,.65);box-shadow:0 0 26px -8px rgba(34,197,94,.75)}
+.task.done .tt{text-decoration:line-through;text-decoration-color:#86efac88}
+.task.failed{background:linear-gradient(135deg,rgba(239,68,68,.34),rgba(239,68,68,.08));border-color:rgba(239,68,68,.75);box-shadow:0 0 26px -8px rgba(239,68,68,.8)}
+.task.failed .ts{color:#fca5a5}
+.task.grace{border-color:var(--warn);animation:pulse 1.6s infinite;background:linear-gradient(135deg,rgba(245,158,11,.2),rgba(245,158,11,.04))}
+.task.grace .ts{color:#fcd34d;font-weight:700}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(245,158,11,.55)}50%{box-shadow:0 0 0 9px rgba(245,158,11,0)}}
+.task.active{border:2px solid transparent;background:linear-gradient(var(--bg2),var(--bg2)) padding-box,conic-gradient(from var(--a),var(--pri1),var(--pri2),var(--pri3),var(--pri1)) border-box;animation:spin 3s linear infinite}
+.task.active .ts{color:#a5f3fc;font-weight:700}
+@keyframes spin{to{--a:360deg}}
+.task.shake{animation:shake .6s}
+@keyframes shake{10%,90%{transform:translateX(-2px)}20%,80%{transform:translateX(4px)}30%,50%,70%{transform:translateX(-7px)}40%,60%{transform:translateX(7px)}}
+.task.justdone{animation:pop .55s cubic-bezier(.3,1.6,.5,1)}
+.task.justdone::after{content:'';position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,rgba(255,255,255,.55) 50%,transparent 70%);transform:translateX(-120%);animation:sweep .9s ease forwards}
+@keyframes pop{40%{transform:scale(1.04)}}
+@keyframes sweep{to{transform:translateX(120%)}}
+.fine{position:absolute;top:5px;right:60px;font-size:10.5px;font-weight:900;color:#fff;background:var(--bad);padding:2px 7px;border-radius:99px;box-shadow:0 4px 12px -2px var(--bad)}
+.anim .slot,.anim .rise{animation:rise .5s cubic-bezier(.2,.8,.2,1) both;animation-delay:calc(var(--i,0)*35ms)}
+@keyframes rise{from{opacity:0;transform:translateY(16px)}}
+
+/* ---------- NAV ---------- */
+.bnav{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(10px + env(safe-area-inset-bottom));width:min(94vw,520px);display:flex;justify-content:space-around;padding:7px;border-radius:24px;z-index:50;background:rgba(22,15,52,.78)}
+.bnav button{position:relative;flex:1;border:0;background:none;display:flex;flex-direction:column;align-items:center;gap:2px;padding:7px 4px;border-radius:17px;color:var(--mut);font-size:11.5px;font-weight:700;transition:all .3s}
+.bnav .ni{font-size:22px;transition:transform .35s cubic-bezier(.3,1.8,.5,1)}
+.bnav button.on{color:#fff;background:linear-gradient(135deg,rgba(255,78,205,.35),rgba(123,92,255,.35))}
+.bnav button.on .ni{transform:translateY(-3px) scale(1.18)}
+.badge{position:absolute;top:2px;right:calc(50% - 26px);min-width:18px;height:18px;padding:0 5px;border-radius:9px;background:var(--bad);color:#fff;font-size:10px;font-style:normal;font-weight:900;display:grid;place-items:center;animation:nudge 1.4s infinite}
+
+/* ---------- SHEET / TOAST ---------- */
+.overlay{position:fixed;inset:0;background:rgba(5,3,15,.6);backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:100;animation:fade .25s both}
+.overlay.out{animation:fade .25s reverse both}
+.overlay.out .sheet{animation:down .25s both}
+@keyframes fade{from{opacity:0}}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:92vh;overflow:auto;background:linear-gradient(180deg,#1d1546,#120d2e);border-top:1px solid var(--line);border-radius:26px 26px 0 0;padding:10px 16px calc(22px + env(safe-area-inset-bottom));animation:up .42s cubic-bezier(.2,1.2,.3,1) both;max-width:600px;margin:0 auto}
+@keyframes up{from{transform:translateY(100%)}}
+@keyframes down{to{transform:translateY(100%)}}
+.grab{width:44px;height:5px;border-radius:9px;background:rgba(255,255,255,.25);margin:0 auto 14px}
+.emos{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:14px}
+.emos input,.cols input,.rep input{display:none}
+.emos span{display:grid;place-items:center;height:40px;border-radius:12px;background:var(--card);font-size:20px;border:1px solid var(--line);transition:all .25s cubic-bezier(.3,1.6,.5,1)}
+.emos input:checked+span{background:linear-gradient(135deg,var(--pri1),var(--pri2));transform:scale(1.12);border-color:transparent}
+.cols{display:flex;gap:10px;margin-bottom:14px;flex-wrap:wrap}
+.cols span{display:block;width:32px;height:32px;border-radius:50%;transition:all .25s cubic-bezier(.3,1.6,.5,1);border:3px solid transparent}
+.cols input:checked+span{border-color:#fff;transform:scale(1.2);box-shadow:0 0 14px currentColor}
+.rep{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-bottom:14px}
+.rep span{display:block;text-align:center;padding:9px 0;border-radius:11px;background:var(--card);border:1px solid var(--line);font-weight:800;font-size:13px;transition:all .2s}
+.rep input:checked+span{background:linear-gradient(135deg,var(--pri3),var(--pri2));border-color:transparent;color:#fff}
+.rep .dis span{opacity:.25;text-decoration:line-through}
+#toasts{position:fixed;top:calc(12px + env(safe-area-inset-top));left:50%;transform:translateX(-50%);z-index:1001;display:flex;flex-direction:column;gap:8px;width:min(92vw,420px);pointer-events:none}
+.toast{padding:12px 16px;border-radius:15px;background:rgba(30,22,70,.95);border:1px solid var(--line);font-weight:700;font-size:14px;box-shadow:0 14px 34px -10px #000;animation:tin .4s cubic-bezier(.2,1.4,.3,1) both,tout .35s 2.8s forwards}
+.toast.ok{border-color:rgba(34,197,94,.6)}.toast.bad{border-color:rgba(239,68,68,.7);background:rgba(70,14,22,.95)}.toast.warn{border-color:rgba(245,158,11,.6)}
+@keyframes tin{from{opacity:0;transform:translateY(-20px) scale(.9)}}
+@keyframes tout{to{opacity:0;transform:translateY(-14px)}}
+.floaty{position:fixed;z-index:1000;pointer-events:none;font-weight:900;font-size:18px;transform:translate(-50%,-50%);animation:floatup 1.3s ease-out forwards;text-shadow:0 2px 12px rgba(0,0,0,.6)}
+@keyframes floatup{to{transform:translate(-50%,-140px) scale(1.3);opacity:0}}
+.loader{min-height:70vh;display:grid;place-items:center}
+.spin{width:52px;height:52px;border-radius:50%;background:conic-gradient(from var(--a),transparent,var(--pri1),var(--pri2),var(--pri3));-webkit-mask:radial-gradient(farthest-side,transparent 70%,#000 72%);mask:radial-gradient(farthest-side,transparent 70%,#000 72%);animation:spin 1s linear infinite}
+
+/* ---------- FUND ---------- */
+.hero{text-align:center;padding:22px 16px;position:relative;overflow:hidden;margin-bottom:14px}
+.hero::before{content:'';position:absolute;inset:-50%;background:conic-gradient(from var(--a),transparent 0 70%,rgba(255,78,205,.25),transparent);animation:spin 6s linear infinite}
+.hero>*{position:relative}
+.coin{font-size:54px;display:inline-block;animation:coin 2.6s linear infinite}
+@keyframes coin{to{transform:rotateY(360deg)}}
+.bignum{font-size:38px;font-weight:900;margin:4px 0}
+.row3{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:12px}
+.row3 div{background:rgba(0,0,0,.2);border-radius:12px;padding:8px 4px}
+.row3 b{display:block;font-size:15px}
+.row3 span{font-size:11px;color:var(--mut)}
+.qrcard{background:#fff;color:#111;border-radius:20px;padding:16px;text-align:center;margin-bottom:14px;box-shadow:0 20px 50px -20px var(--pri1)}
+.qrcard img{width:100%;max-width:260px;border-radius:12px;display:block;margin:0 auto 10px}
+.qrcard .amt{font-size:26px;font-weight:900;color:#a50064}
+.ckline{display:flex;align-items:center;justify-content:center;gap:8px;margin-top:8px;font-size:14px}
+.ckline code{background:#f3e8ff;padding:5px 10px;border-radius:8px;font-weight:800;color:#6b21a8}
+.noqr{padding:30px 10px;border:2px dashed #ccc;border-radius:12px;color:#777;margin-bottom:10px}
+.sec{font-size:15px;font-weight:900;margin:18px 2px 10px;display:flex;align-items:center;justify-content:space-between}
+.li{display:flex;align-items:center;gap:12px;padding:12px;margin-bottom:8px}
+.li .tx{flex:1;min-width:0}
+.li .amt{font-weight:900;white-space:nowrap}
+.empty-msg{text-align:center;color:var(--mut);padding:22px;font-size:14px}
+
+/* ---------- ADMIN ---------- */
+.sum4{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:6px}
+.sum4 .stat .v{font-size:20px}
+.urow{cursor:pointer;transition:transform .15s}
+.urow:active{transform:scale(.98)}
+.uava{width:40px;height:40px;border-radius:13px;display:grid;place-items:center;font-weight:900;background:linear-gradient(135deg,var(--pri2),var(--pri3));flex:none}
+.rank{width:22px;text-align:center;font-weight:900;font-size:15px}
+.mini{height:6px;background:rgba(255,255,255,.1);border-radius:9px;overflow:hidden;margin-top:6px}
+.mini i{display:block;height:100%;background:linear-gradient(90deg,var(--ok),#a3e635)}
+.gridwrap{overflow-x:auto;margin:0 -16px;padding:0 16px 6px}
+table.gt{border-collapse:separate;border-spacing:3px;font-size:11px;min-width:560px;width:100%;table-layout:fixed}
+.gt th{font-weight:800;color:var(--mut);padding:4px 2px}
+.gt th.h{text-align:right;width:34px}
+.gt td{background:rgba(255,255,255,.04);border-radius:9px;height:44px;vertical-align:top;padding:4px;border:1px solid transparent;max-width:70px}
+.gt td small{display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:10px;font-weight:600}
+.gt td.done{background:rgba(34,197,94,.28);border-color:rgba(34,197,94,.6)}
+.gt td.failed{background:rgba(239,68,68,.3);border-color:rgba(239,68,68,.65)}
+.gt td.grace,.gt td.active{background:rgba(245,158,11,.22);border-color:rgba(245,158,11,.6)}
+.gt td.upcoming{background:rgba(123,92,255,.2);border-color:rgba(123,92,255,.45)}
+.legend{display:flex;gap:12px;flex-wrap:wrap;font-size:11.5px;color:var(--mut);margin:10px 0}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+.qrprev{max-width:160px;border-radius:12px;display:block;margin:6px 0 10px;background:#fff;padding:6px}
+.detail-hero{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+.detail-hero .emo{width:60px;height:60px;font-size:34px;border-radius:18px}
+.kv{display:flex;justify-content:space-between;padding:10px 0;border-bottom:1px solid var(--line);font-size:14px}
+.kv span{color:var(--mut)}
+.btnrow{display:flex;gap:10px;margin-top:16px}
+.btnrow .btn{flex:1}
+.demo-banner{font-size:11.5px;text-align:center;color:#fde68a;background:rgba(245,158,11,.12);border:1px solid rgba(245,158,11,.3);border-radius:10px;padding:6px;margin-bottom:12px}
+@media (max-width:370px){.stats{grid-template-columns:1fr 1fr}.stats .stat:first-child{grid-column:span 2}.emos{grid-template-columns:repeat(6,1fr)}}
+@media (prefers-reduced-motion:reduce){*{animation-duration:.01ms!important;animation-iteration-count:1!important}}
+</style>
+</head>
+<body>
+<div class="bg"><span class="blob b1"></span><span class="blob b2"></span><span class="blob b3"></span><span class="stars"></span></div>
+<svg width="0" height="0" style="position:absolute"><defs><linearGradient id="rg" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#22d3ee"/><stop offset=".5" stop-color="#7b5cff"/><stop offset="1" stop-color="#ff4ecd"/></linearGradient></defs></svg>
+<canvas id="fx"></canvas>
+<div id="app"></div>
+<div id="toasts"></div>
+<div id="modal-root"></div>
+<script src="config.js"></script>
+<script type="module">
+/* =====================================================================
+   CẤU HÌNH & TIỆN ÍCH
+   ===================================================================== */
+const C = Object.assign({
+  APP_NAME:'Thời Gian Biểu', ADMIN_USERNAME:'admin', EMAIL_DOMAIN:'tgb.app',
+  FINE_AMOUNT:10000, GRACE_MINUTES:60, START_HOUR:5, END_HOUR:24
+}, window.APP_CONFIG || {});
+C.ADMIN_USERNAME = C.ADMIN_USERNAME.toLowerCase();
+const HOUR = 3600e3, MIN = 60e3, DAY = 864e5;
+const useFirebase = !!(C.firebase && C.firebase.apiKey);
+
+const $ = s => document.querySelector(s);
+const $$ = s => [...document.querySelectorAll(s)];
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const money = n => (Math.round(n) || 0).toLocaleString('vi-VN') + 'đ';
+const pad = n => String(n).padStart(2, '0');
+const dk = d => `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+const parseDK = s => { const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); };
+const addDays = (d, n) => { const x = new Date(d); x.setDate(x.getDate() + n); return x; };
+const mondayOf = d => { const x = new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate() - (x.getDay()+6)%7); return x; };
+const dowIdx = d => (d.getDay()+6)%7;
+const slotMs = (d, h) => new Date(d.getFullYear(), d.getMonth(), d.getDate(), h).getTime();
+const fmtD = d => `${pad(d.getDate())}/${pad(d.getMonth()+1)}`;
+const fmtT = ms => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
+const fmtDT = ms => { const d = new Date(ms); return `${fmtT(ms)} ${fmtD(d)}`; };
+const initials = n => (n||'?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
+const DOW = ['T2','T3','T4','T5','T6','T7','CN'];
+const DOWF = ['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ Nhật'];
+const EMOJIS = ['📌','📚','💼','🏛️','📝','💻','📞','🤝','🏃','🧘','🍳','🍽️','🛒','🧹','🚗','😴'];
+const COLORS = ['#ff4ecd','#7b5cff','#22d3ee','#f59e0b','#22c55e','#f97316','#e11d48','#14b8a6'];
+const QUOTES = ['Việc hôm nay chớ để ngày mai.','Mỗi ô xanh là một bước tiến.','Làm ít mà chắc, còn hơn hứa nhiều.','Kỷ luật hôm nay, nhẹ nhàng ngày mai.','Tick xanh cho ví khỏi mỏng 💚','Nói ít, làm nhiều, làm đến nơi.'];
+const CHEERS = ['Tuyệt vời! 🔥','Xuất sắc! ⭐','Quá đỉnh! 🚀','Giữ phong độ nhé! 💪','Thêm một ô xanh! 💚','Làm tốt lắm! 👏'];
+
+function status(t, now = Date.now()) {
+  if (t.done) return 'done';
+  if (now < t.start) return 'upcoming';
+  if (now < t.start + HOUR) return 'active';
+  if (now < t.deadline) return 'grace';
+  return 'failed';
+}
+const fineOf = tasks => tasks.filter(t => status(t) === 'failed').length * C.FINE_AMOUNT;
+const paidOf = ps => ps.filter(p => p.status === 'confirmed').reduce((s, p) => s + (+p.amount || 0), 0);
+const pendOf = ps => ps.filter(p => p.status === 'pending').reduce((s, p) => s + (+p.amount || 0), 0);
+function streak(tasks) {
+  const now = Date.now(), by = {};
+  tasks.forEach(t => (by[t.date] ??= []).push(status(t, now)));
+  let d = new Date(); d.setHours(0,0,0,0);
+  const today = by[dk(d)];
+  if (!(today && today.length && today.every(s => s === 'done'))) d = addDays(d, -1);
+  let n = 0;
+  for (let i = 0; i < 400; i++) {
+    const a = by[dk(d)];
+    if (!a || !a.length || a.some(s => s !== 'done')) break;
+    n++; d = addDays(d, -1);
+  }
+  return n;
+}
+function levelOf(tasks) {
+  const xp = tasks.filter(t => t.done).length * 10;
+  const lv = Math.floor(Math.sqrt(xp / 40)) + 1;
+  const a = 40 * (lv-1) ** 2, b = 40 * lv ** 2;
+  return { xp, lv, pct: Math.round((xp - a) / (b - a) * 100) };
+}
+const greet = () => { const h = new Date().getHours(); return h < 11 ? 'Chào buổi sáng' : h < 14 ? 'Chào buổi trưa' : h < 18 ? 'Chào buổi chiều' : 'Chào buổi tối'; };
+
+const ERR = {
+  'auth/invalid-credential':'Sai tên đăng nhập hoặc mật khẩu','auth/user-not-found':'Tài khoản không tồn tại',
+  'auth/wrong-password':'Sai mật khẩu','auth/email-already-in-use':'Tên đăng nhập này đã có người dùng',
+  'auth/weak-password':'Mật khẩu tối thiểu 6 ký tự','auth/invalid-email':'Tên đăng nhập không hợp lệ',
+  'auth/too-many-requests':'Thử sai quá nhiều lần, vui lòng đợi ít phút','auth/network-request-failed':'Mất kết nối mạng',
+  'permission-denied':'Không có quyền, hoặc đã quá thời gian cho phép','unavailable':'Mất kết nối máy chủ, thử lại sau'
+};
+const errMsg = e => ERR[e?.code] || ERR[e?.message] || e?.message || 'Có lỗi xảy ra';
+
+/* =====================================================================
+   HIỆU ỨNG: pháo giấy, chữ bay, toast, rung
+   ===================================================================== */
+const fx = $('#fx'), ctx = fx.getContext('2d');
+let parts = [], running = false;
+function fitFx() { const r = devicePixelRatio || 1; fx.width = innerWidth * r; fx.height = innerHeight * r; ctx.setTransform(r,0,0,r,0,0); }
+addEventListener('resize', fitFx); fitFx();
+function burst(x, y, n = 60, colors = ['#ff4ecd','#7b5cff','#22d3ee','#facc15','#22c55e','#fff'], power = 1) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, sp = (Math.random() * 8 + 3) * power;
+    parts.push({ x, y, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp - 6 * power, s: Math.random() * 7 + 4,
+      r: Math.random() * 6.3, vr: (Math.random() - .5) * .35, c: colors[i % colors.length],
+      life: 80 + Math.random() * 50, sh: Math.random() < .6 });
+  }
+  if (!running) { running = true; requestAnimationFrame(loop); }
+}
+function loop() {
+  ctx.clearRect(0, 0, innerWidth, innerHeight);
+  parts = parts.filter(p => p.life-- > 0 && p.y < innerHeight + 50);
+  for (const p of parts) {
+    p.vy += .32; p.vx *= .985; p.x += p.vx; p.y += p.vy; p.r += p.vr;
+    ctx.save(); ctx.translate(p.x, p.y); ctx.rotate(p.r); ctx.globalAlpha = Math.min(1, p.life / 30);
+    ctx.fillStyle = p.c;
+    if (p.sh) ctx.fillRect(-p.s/2, -p.s/4, p.s, p.s/2); else { ctx.beginPath(); ctx.arc(0,0,p.s/2.4,0,7); ctx.fill(); }
+    ctx.restore();
+  }
+  if (parts.length) requestAnimationFrame(loop); else { running = false; ctx.clearRect(0,0,innerWidth,innerHeight); }
+}
+function celebrate() {
+  burst(0, innerHeight * .75, 90, undefined, 1.4);
+  burst(innerWidth, innerHeight * .75, 90, undefined, 1.4);
+  setTimeout(() => burst(innerWidth / 2, innerHeight * .35, 120, undefined, 1.2), 250);
+}
+function floatText(txt, x, y, color = '#86efac') {
+  const el = document.createElement('div'); el.className = 'floaty'; el.textContent = txt;
+  el.style.left = x + 'px'; el.style.top = y + 'px'; el.style.color = color;
+  document.body.appendChild(el); setTimeout(() => el.remove(), 1400);
+}
+function toast(msg, type = 'ok') {
+  const el = document.createElement('div'); el.className = 'toast ' + type; el.textContent = msg;
+  $('#toasts').appendChild(el); setTimeout(() => el.remove(), 3300);
+}
+const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
+
+/* =====================================================================
+   LƯU TRỮ: (1) CHẾ ĐỘ THỬ – localStorage   (2) FIREBASE – dùng thật
+   ===================================================================== */
+function makeLocal() {
+  const KEY = 'tgb_demo_db', SKEY = 'tgb_demo_session';
+  let db; try { db = JSON.parse(localStorage.getItem(KEY)); } catch {}
+  db ||= { users:{}, tasks:{}, payments:{}, settings:{} };
+  const save = () => localStorage.setItem(KEY, JSON.stringify(db));
+  const hash = async s => {
+    if (crypto?.subtle) { const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('tgb:' + s)); return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2,'0')).join(''); }
+    return 'p:' + s;
+  };
+  const uidOf = u => 'u_' + u;
+  const me = uid => { const u = db.users[uid]; return u ? { uid, username:u.username, displayName:u.displayName, createdAt:u.createdAt, isAdmin:u.username === C.ADMIN_USERNAME } : null; };
+  let cb = () => {};
+  const fail = code => { const e = new Error(code); e.code = code; throw e; };
+  return {
+    mode: 'demo',
+    async init() {
+      if (!db.users[uidOf(C.ADMIN_USERNAME)]) {
+        db.users[uidOf(C.ADMIN_USERNAME)] = { username:C.ADMIN_USERNAME, displayName:'Quản trị viên', pass:await hash('admin123'), createdAt:Date.now() };
+        save();
+      }
+    },
+    onAuth(f) { cb = f; const s = localStorage.getItem(SKEY); f(s ? me(s) : null); },
+    async login(u, p) {
+      const x = db.users[uidOf(u)];
+      if (!x || x.pass !== await hash(p)) fail('auth/invalid-credential');
+      localStorage.setItem(SKEY, uidOf(u)); cb(me(uidOf(u)));
+    },
+    async register(u, p, name) {
+      if (db.users[uidOf(u)]) fail('auth/email-already-in-use');
+      if (p.length < 6) fail('auth/weak-password');
+      db.users[uidOf(u)] = { username:u, displayName:name || u, pass:await hash(p), createdAt:Date.now() };
+      save(); localStorage.setItem(SKEY, uidOf(u)); cb(me(uidOf(u)));
+    },
+    async logout() { localStorage.removeItem(SKEY); cb(null); },
+    async listUsers() { return Object.keys(db.users).map(me); },
+    async listTasks(uid) { return Object.values(db.tasks[uid] || {}).map(t => ({...t})); },
+    async addTask(uid, t) {
+      const id = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+      (db.tasks[uid] ??= {})[id] = { ...t, id, createdAt:Date.now() }; save(); return id;
+    },
+    async updateTask(uid, id, p) { Object.assign(db.tasks[uid][id], p); save(); },
+    async deleteTask(uid, id) { delete db.tasks[uid][id]; save(); },
+    async listPayments(uid) { return Object.values(db.payments[uid] || {}).map(p => ({...p})).sort((a, b) => b.createdAt - a.createdAt); },
+    async addPayment(uid, p) { const id = 'p' + Date.now().toString(36); (db.payments[uid] ??= {})[id] = { ...p, id }; save(); return id; },
+    async updatePayment(uid, id, p) { Object.assign(db.payments[uid][id], p); save(); },
+    async getSettings() { return { ...(db.settings || {}) }; },
+    async saveSettings(s) { db.settings = { ...db.settings, ...s }; save(); }
+  };
+}
+
+async function makeFirebase() {
+  const B = 'https://www.gstatic.com/firebasejs/10.12.2/';
+  const [A, AU, FS] = await Promise.all([import(B + 'firebase-app.js'), import(B + 'firebase-auth.js'), import(B + 'firebase-firestore.js')]);
+  const app = A.initializeApp(C.firebase);
+  const auth = AU.getAuth(app), db = FS.getFirestore(app);
+  const { doc, getDoc, setDoc, getDocs, collection, addDoc, updateDoc, deleteDoc, Timestamp } = FS;
+  const email = u => `${u}@${C.EMAIL_DOMAIN}`;
+  const toMs = v => v && typeof v.toMillis === 'function' ? v.toMillis() : v;
+  const normT = d => { const x = d.data(); return { ...x, id:d.id, start:toMs(x.start), deadline:toMs(x.deadline) }; };
+  const mkUser = (uid, d) => ({ uid, ...d, isAdmin:d.username === C.ADMIN_USERNAME });
+  let pendingName = null;
+  return {
+    mode: 'firebase',
+    onAuth(cb) {
+      AU.onAuthStateChanged(auth, async fu => {
+        if (!fu) return cb(null);
+        try {
+          const ref = doc(db, 'users', fu.uid);
+          const s = await getDoc(ref);
+          let d = s.exists() ? s.data() : null;
+          if (!d) {
+            const username = fu.email.split('@')[0];
+            d = { username, displayName:pendingName || username, createdAt:Date.now() };
+            await setDoc(ref, d); pendingName = null;
+          }
+          cb(mkUser(fu.uid, d));
+        } catch (e) { console.error(e); toast(errMsg(e), 'bad'); cb(null); }
+      });
+    },
+    async login(u, p) { await AU.signInWithEmailAndPassword(auth, email(u), p); },
+    async register(u, p, name) { pendingName = name; await AU.createUserWithEmailAndPassword(auth, email(u), p); },
+    async logout() { await AU.signOut(auth); },
+    async listUsers() { const s = await getDocs(collection(db, 'users')); return s.docs.map(d => mkUser(d.id, d.data())); },
+    async listTasks(uid) { const s = await getDocs(collection(db, 'users', uid, 'tasks')); return s.docs.map(normT); },
+    async addTask(uid, t) {
+      const { id, ...rest } = t;
+      const r = await addDoc(collection(db, 'users', uid, 'tasks'), { ...rest, start:Timestamp.fromMillis(t.start), deadline:Timestamp.fromMillis(t.deadline), createdAt:Date.now() });
+      return r.id;
+    },
+    async updateTask(uid, id, p) { await updateDoc(doc(db, 'users', uid, 'tasks', id), p); },
+    async deleteTask(uid, id) { await deleteDoc(doc(db, 'users', uid, 'tasks', id)); },
+    async listPayments(uid) { const s = await getDocs(collection(db, 'users', uid, 'payments')); return s.docs.map(d => ({ ...d.data(), id:d.id })).sort((a, b) => b.createdAt - a.createdAt); },
+    async addPayment(uid, p) { const r = await addDoc(collection(db, 'users', uid, 'payments'), p); return r.id; },
+    async updatePayment(uid, id, p) { await updateDoc(doc(db, 'users', uid, 'payments', id), p); },
+    async getSettings() { const s = await getDoc(doc(db, 'settings', 'fund')); return s.exists() ? s.data() : {}; },
+    async saveSettings(x) { await setDoc(doc(db, 'settings', 'fund'), x, { merge:true }); }
+  };
+}
+
+/* =====================================================================
+   TRẠNG THÁI & GIAO DIỆN
+   ===================================================================== */
+let DB;
+const S = { me:null, tasks:[], payments:[], settings:{}, week:mondayOf(new Date()), day:dowIdx(new Date()),
+  tab:'cal', authMode:'login', animate:true, shake:new Set(), justDone:null, admin:null, uv:null, quote:QUOTES[Math.floor(Math.random()*QUOTES.length)] };
+const loaderHTML = `<div class="loader"><div class="spin"></div></div>`;
+
+function render() {
+  if (!S.me) return renderAuth();
+  const body = S.tab === 'fund' ? viewFund() : S.tab === 'admin' && S.me.isAdmin ? viewAdmin() : viewCal();
+  $('#app').innerHTML = `<div class="wrap ${S.animate ? 'anim' : ''}">${DB.mode === 'demo' ? `<div class="demo-banner">⚙️ Chế độ thử — dữ liệu chỉ lưu trên máy này. Cấu hình Firebase để dùng chung.</div>` : ''}${header()}${body}</div>${nav()}`;
+  $$('img.qrimg').forEach(i => i.onerror = () => { i.outerHTML = '<div class="noqr">Admin chưa tải mã QR MoMo lên</div>'; });
+  if (S.animate) countUp();
+  S.animate = false;
+}
+
+function countUp() {
+  $$('[data-count]').forEach(el => {
+    const to = +el.dataset.count, fmt = el.dataset.fmt, t0 = performance.now(), dur = 900;
+    const step = now => { const k = Math.min(1, (now - t0) / dur), v = to * (1 - Math.pow(1 - k, 3));
+      el.textContent = fmt === 'money' ? money(v) : Math.round(v); if (k < 1) requestAnimationFrame(step); };
+    requestAnimationFrame(step);
+  });
+}
+
+function renderAuth() {
+  const reg = S.authMode === 'reg';
+  $('#app').innerHTML = `<div class="wrap auth">
+    <div class="logo">🗓️</div>
+    <h1 class="grad big">${esc(C.APP_NAME)}</h1>
+    <div class="mut">Lên lịch · Tick xanh · Giữ ví khỏi mỏng 💸</div>
+    <div class="glass card">
+      <div class="seg"><span class="seg-ind" style="transform:translateX(${reg ? 'calc(100% + 0px)' : '0'})"></span>
+        <button data-a="authMode" data-v="login" class="${!reg ? 'on' : ''}">Đăng nhập</button>
+        <button data-a="authMode" data-v="reg" class="${reg ? 'on' : ''}">Đăng ký</button></div>
+      <form id="authForm" autocomplete="on">
+        ${reg ? `<label>Họ tên hiển thị<input name="name" required maxlength="40" placeholder="VD: Nguyễn Văn An"></label>` : ''}
+        <label>Tên đăng nhập<input name="u" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="chữ thường, số, gạch dưới"></label>
+        <label>Mật khẩu<input name="p" type="password" required minlength="6" autocomplete="${reg ? 'new-password' : 'current-password'}" placeholder="tối thiểu 6 ký tự"></label>
+        <button class="btn full" type="submit">${reg ? 'Tạo tài khoản ✨' : 'Vào ứng dụng 🚀'}</button>
+      </form>
+      ${DB.mode === 'demo' ? `<div class="note">⚙️ Đang ở <b>chế độ thử</b>: dữ liệu chỉ lưu trên máy này.<br>Tài khoản admin thử: <b>${esc(C.ADMIN_USERNAME)}</b> / <b>admin123</b></div>` : ''}
+    </div></div>`;
+}
+
+function header() {
+  const L = levelOf(S.tasks);
+  return `<header class="top">
+    <div class="ava">${esc(initials(S.me.displayName))}</div>
+    <div class="hi"><div class="mut sm">${greet()},</div>
+      <div class="name">${esc(S.me.displayName)} ${S.me.isAdmin ? '<span class="chip adm">ADMIN</span>' : ''}</div>
+      <div class="lv"><span>Lv ${L.lv}</span><div class="bar"><i style="width:${L.pct}%"></i></div><span class="mut">${L.xp} XP</span></div></div>
+    <button class="icon-btn" data-a="logout" aria-label="Đăng xuất">⏻</button>
+  </header><div class="quote">“${esc(S.quote)}”</div>`;
+}
+
+function nav() {
+  const debt = Math.max(0, fineOf(S.tasks) - paidOf(S.payments));
+  const pendAdmin = S.admin ? S.admin.reduce((n, u) => n + u.payments.filter(p => p.status === 'pending').length, 0) : 0;
+  const items = [['cal','🗓️','Lịch'], ['fund','💰','Quỹ']];
+  if (S.me.isAdmin) items.push(['admin','👑','Quản trị']);
+  return `<nav class="bnav glass">${items.map(([k, i, l]) => `<button data-a="tab" data-v="${k}" class="${S.tab === k ? 'on' : ''}"><span class="ni">${i}</span><span>${l}</span>
+    ${k === 'fund' && debt > 0 ? `<i class="badge">${debt / 1000}k</i>` : ''}${k === 'admin' && pendAdmin ? `<i class="badge">${pendAdmin}</i>` : ''}</button>`).join('')}</nav>`;
+}
+
+/* ---------------- LỊCH ---------------- */
+function weekTasksOf(tasks, ws) { const a = ws.getTime(), b = addDays(ws, 7).getTime(); return tasks.filter(t => t.start >= a && t.start < b); }
+
+function viewCal() {
+  const now = Date.now(), ws = S.week, days = [...Array(7)].map((_, i) => addDays(ws, i));
+  const wt = weekTasksOf(S.tasks, ws);
+  const doneW = wt.filter(t => t.done).length, pct = wt.length ? Math.round(doneW / wt.length * 100) : 0;
+  const debt = Math.max(0, fineOf(S.tasks) - paidOf(S.payments)), st = streak(S.tasks);
+  const isThis = ws.getTime() === mondayOf(new Date()).getTime();
+  const todayKey = dk(new Date());
+  const day = days[S.day], dkey = dk(day);
+  const dayTasks = wt.filter(t => t.date === dkey);
+  const dayDone = dayTasks.filter(t => t.done).length;
+  const canCopy = addDays(ws, 7).getTime() > now;
+  let slots = '';
+  for (let h = C.START_HOUR, i = 0; h < C.END_HOUR; h++, i++) slots += slotHTML(dayTasks.find(t => t.hour === h), day, h, now, i);
+
+  return `
+  <div class="stats">
+    <div class="glass stat ringbox rise" style="--i:0">
+      <svg class="ring" viewBox="0 0 64 64"><circle class="tr" cx="32" cy="32" r="26"/><circle class="pr" cx="32" cy="32" r="26" style="--off:${163.36 * (1 - pct / 100)}"/><text x="32" y="33">${pct}%</text></svg>
+      <div><div class="k">Tuần này</div><div class="b">${doneW}/${wt.length} việc</div></div>
+    </div>
+    <div class="glass stat rise" style="--i:1"><div class="v"><span class="flame">🔥</span> <span data-count="${st}">${st}</span></div><div class="k">ngày liên tiếp</div></div>
+    <div class="glass stat debt ${debt ? 'has' : 'zero'} rise" style="--i:2" data-a="tab" data-v="fund"><div class="v" style="font-size:17px" data-count="${debt}" data-fmt="money">${money(debt)}</div><div class="k">${debt ? 'đang nợ quỹ' : 'không nợ 🎉'}</div></div>
+  </div>
+  <div class="weeknav">
+    <button class="icon-btn" data-a="week" data-v="-1" aria-label="Tuần trước">‹</button>
+    <div class="wk glass" data-a="week" data-v="0"><b>${fmtD(days[0])} – ${fmtD(days[6])}</b><span class="sm mut">${isThis ? 'Tuần này' : 'Bấm để về tuần này'}</span></div>
+    <button class="icon-btn" data-a="week" data-v="1" aria-label="Tuần sau">›</button>
+  </div>
+  <div class="days">${days.map((d, i) => {
+    const ts = wt.filter(t => t.date === dk(d)).sort((a, b) => a.hour - b.hour);
+    return `<button class="day ${i === S.day ? 'on' : ''} ${dk(d) === todayKey ? 'today' : ''}" data-a="day" data-v="${i}">
+      <div class="dn">${DOW[i]}</div><div class="dd">${d.getDate()}</div>
+      <div class="dots">${ts.slice(0, 5).map(t => `<i class="${status(t, now)}"></i>`).join('')}</div></button>`;
+  }).join('')}</div>
+  <div class="dayhead"><div><h2>${DOWF[S.day]}, ${fmtD(day)}</h2><div class="sm mut">${dayTasks.length ? `${dayDone}/${dayTasks.length} việc hoàn thành` : 'Chưa có việc nào – bấm ô trống để thêm'}</div></div>
+    ${canCopy ? `<button class="btn ghost sm" data-a="copyWeek">📋 Chép tuần trước</button>` : ''}</div>
+  <div class="dayprog"><i style="width:${dayTasks.length ? dayDone / dayTasks.length * 100 : 0}%"></i></div>
+  ${slots}`;
+}
+
+function slotHTML(t, day, h, now, i) {
+  const start = slotMs(day, h), isNow = now >= start && now < start + HOUR;
+  const time = `<div class="time ${isNow ? 'now' : ''}"><b>${pad(h)}:00</b>${isNow ? '<span class="nowpill">BÂY GIỜ</span>' : ''}</div>`;
+  if (!t) {
+    return `<div class="slot" style="--i:${i}">${time}${now < start + HOUR
+      ? `<button class="empty" data-a="add" data-d="${dk(day)}" data-h="${h}"><span class="plus">＋</span>Thêm nhiệm vụ</button>`
+      : `<div class="empty past">—</div>`}</div>`;
+  }
+  const s = status(t, now);
+  const left = s === 'grace' ? Math.ceil((t.deadline - now) / MIN) : s === 'active' ? Math.ceil((start + HOUR - now) / MIN) : 0;
+  const sub = { done:`✅ Hoàn thành${t.doneAt ? ' lúc ' + fmtT(t.doneAt) : ''}`, failed:`❌ Không hoàn thành · -${money(C.FINE_AMOUNT)}`,
+    grace:`⚠️ Hết giờ! Còn ${left} phút để tick`, active:`⚡ Đang diễn ra · còn ${left} phút`, upcoming:`⏳ ${pad(h)}:00 – ${pad(h + 1)}:00` }[s];
+  const chk = { done:'✓', failed:'✕', upcoming:'🔒', active:'', grace:'' }[s];
+  return `<div class="slot" style="--i:${i}">${time}
+    <div class="task ${s} ${S.shake.has(t.id) ? 'shake' : ''} ${S.justDone === t.id ? 'justdone' : ''}" style="--c:${esc(t.color || '#7b5cff')}" data-a="detail" data-id="${esc(t.id)}">
+      <div class="emo">${esc(t.emoji || '📌')}</div>
+      <div class="tx"><div class="tt">${esc(t.title)}</div><div class="ts">${sub}</div></div>
+      ${s === 'failed' ? `<span class="fine">-${C.FINE_AMOUNT / 1000}k</span>` : ''}
+      <button class="chk ${s}" data-a="tick" data-id="${esc(t.id)}" aria-label="Đánh dấu hoàn thành">${chk}</button>
+    </div></div>`;
+}
+
+/* ---------------- QUỸ ---------------- */
+function viewFund() {
+  const failed = S.tasks.filter(t => status(t) === 'failed').sort((a, b) => b.start - a.start);
+  const fin = failed.length * C.FINE_AMOUNT, paid = paidOf(S.payments), pend = pendOf(S.payments);
+  const debt = Math.max(0, fin - paid), toPay = Math.max(0, debt - pend);
+  const ck = `QUY ${S.me.username}`.toUpperCase();
+  const st = S.settings || {};
+  return `
+  <div class="glass hero rise" style="--i:0">
+    <div class="coin">🪙</div>
+    <div class="mut sm">${debt ? 'Bạn đang nợ quỹ' : 'Bạn không nợ quỹ'}</div>
+    <div class="bignum ${debt ? '' : 'grad'}" style="${debt ? 'color:#fca5a5' : ''}" data-count="${debt}" data-fmt="money">${money(debt)}</div>
+    <div class="sm mut">Mỗi việc không hoàn thành: <b style="color:#fff">${money(C.FINE_AMOUNT)}</b></div>
+    <div class="row3"><div><b>${money(fin)}</b><span>Tổng phạt (${failed.length} việc)</span></div><div><b style="color:#86efac">${money(paid)}</b><span>Đã nộp</span></div><div><b style="color:#fcd34d">${money(pend)}</b><span>Chờ duyệt</span></div></div>
+  </div>
+  ${toPay > 0 ? `
+  <div class="qrcard rise" style="--i:1">
+    <div style="font-weight:900;color:#a50064;margin-bottom:8px">Quét mã MoMo để nộp quỹ</div>
+    ${st.qr ? `<img class="qrimg" src="${st.qr}" alt="Mã QR MoMo">` : `<img class="qrimg" src="momo-qr.png" alt="Mã QR MoMo">`}
+    ${st.name || st.phone ? `<div style="font-weight:700">${esc(st.name || '')}${st.phone ? ' · ' + esc(st.phone) : ''}</div>` : ''}
+    <div class="amt">${money(toPay)}</div>
+    <div class="ckline">Nội dung: <code>${esc(ck)}</code><button class="btn ghost sm" style="color:#6b21a8;border-color:#e9d5ff" data-a="copy" data-v="${esc(ck)}">Chép</button></div>
+    <button class="btn full" style="margin-top:14px" data-a="payClaim" data-v="${toPay}">💸 Tôi đã chuyển khoản</button>
+    <div style="font-size:11.5px;color:#666;margin-top:8px">MoMo không cho trang web tự trừ tiền ví. Anh/chị quét mã, chuyển rồi bấm nút trên để admin xác nhận.</div>
+  </div>` : debt > 0 ? `<div class="note rise">⏳ Đã báo chuyển ${money(pend)}, đang chờ admin xác nhận.</div>` : ''}
+  <div class="sec">❌ Việc không hoàn thành <span class="sm mut">${failed.length}</span></div>
+  ${failed.length ? failed.slice(0, 50).map((t, i) => `<div class="glass li rise" style="--i:${i + 2}"><div class="emo">${esc(t.emoji || '📌')}</div><div class="tx"><div class="tt">${esc(t.title)}</div><div class="ts">${DOW[dowIdx(parseDK(t.date))]} ${fmtD(parseDK(t.date))} · ${pad(t.hour)}:00</div></div><div class="amt" style="color:#fca5a5">-${money(C.FINE_AMOUNT)}</div></div>`).join('') : `<div class="empty-msg">Chưa bỏ lỡ việc nào. Giữ vững nhé! 🏆</div>`}
+  <div class="sec">🧾 Lịch sử nộp quỹ</div>
+  ${S.payments.length ? S.payments.map(p => `<div class="glass li"><div class="tx"><div class="tt">${money(p.amount)}</div><div class="ts">${fmtDT(p.createdAt)}</div></div>${chipOf(p.status)}</div>`).join('') : `<div class="empty-msg">Chưa có lần nộp nào.</div>`}`;
+}
+const chipOf = s => s === 'confirmed' ? '<span class="chip ok">ĐÃ XÁC NHẬN</span>' : s === 'rejected' ? '<span class="chip no">TỪ CHỐI</span>' : '<span class="chip pend">CHỜ DUYỆT</span>';
+
+/* ---------------- QUẢN TRỊ ---------------- */
+async function loadAdmin() {
+  const users = (await DB.listUsers()).filter(Boolean);
+  S.admin = await Promise.all(users.map(async u => ({ ...u, tasks:await DB.listTasks(u.uid), payments:await DB.listPayments(u.uid) })));
+}
+function viewAdmin() {
+  if (!S.admin) { loadAdmin().then(() => { S.animate = true; render(); }).catch(e => toast(errMsg(e), 'bad')); return loaderHTML; }
+  const ws = mondayOf(new Date()), now = Date.now();
+  const rows = S.admin.map(u => {
+    const wt = weekTasksOf(u.tasks, ws), done = wt.filter(t => t.done).length;
+    const fin = fineOf(u.tasks), paid = paidOf(u.payments);
+    return { u, wt, done, failedW:wt.filter(t => status(t, now) === 'failed').length, pct:wt.length ? Math.round(done / wt.length * 100) : 0, debt:Math.max(0, fin - paid), paid };
+  }).sort((a, b) => b.pct - a.pct || b.done - a.done);
+  const pend = S.admin.flatMap(u => u.payments.filter(p => p.status === 'pending').map(p => ({ u, p })));
+  const collected = rows.reduce((s, r) => s + r.paid, 0), owing = rows.reduce((s, r) => s + r.debt, 0);
+  const st = S.settings || {};
+  const medal = i => ['🥇','🥈','🥉'][i] || (i + 1);
+  return `
+  <div class="sum4">
+    <div class="glass stat rise" style="--i:0"><div class="v" data-count="${rows.length}">${rows.length}</div><div class="k">👥 thành viên</div></div>
+    <div class="glass stat rise" style="--i:1"><div class="v" style="color:#86efac" data-count="${collected}" data-fmt="money">${money(collected)}</div><div class="k">💰 quỹ đã thu</div></div>
+    <div class="glass stat rise" style="--i:2"><div class="v" style="color:#fca5a5" data-count="${owing}" data-fmt="money">${money(owing)}</div><div class="k">📉 còn nợ</div></div>
+    <div class="glass stat rise" style="--i:3"><div class="v" style="color:#fcd34d">${pend.length}</div><div class="k">⏳ chờ duyệt</div></div>
+  </div>
+  <div class="sec">⏳ Xác nhận nộp quỹ <button class="btn ghost sm" data-a="reloadAdmin">↻ Tải lại</button></div>
+  ${pend.length ? pend.map(({ u, p }) => `<div class="glass li"><div class="uava">${esc(initials(u.displayName))}</div><div class="tx"><div class="tt">${esc(u.displayName)}</div><div class="ts">${money(p.amount)} · ${fmtDT(p.createdAt)} · ND: QUY ${esc(u.username.toUpperCase())}</div></div>
+    <button class="btn ok sm" data-a="payOk" data-uid="${esc(u.uid)}" data-id="${esc(p.id)}">✓</button><button class="btn no sm" data-a="payNo" data-uid="${esc(u.uid)}" data-id="${esc(p.id)}">✕</button></div>`).join('') : `<div class="empty-msg">Không có khoản nào chờ duyệt.</div>`}
+  <div class="sec">🏆 Bảng xếp hạng tuần này</div>
+  ${rows.map((r, i) => `<div class="glass li urow rise" style="--i:${i + 4}" data-a="viewUser" data-uid="${esc(r.u.uid)}">
+    <div class="rank">${medal(i)}</div><div class="uava">${esc(initials(r.u.displayName))}</div>
+    <div class="tx"><div class="tt">${esc(r.u.displayName)} ${r.u.isAdmin ? '<span class="chip adm">ADMIN</span>' : ''}</div>
+      <div class="ts">@${esc(r.u.username)} · ${r.done}/${r.wt.length} xong · ${r.failedW} trượt</div><div class="mini"><i style="width:${r.pct}%"></i></div></div>
+    <div style="text-align:right"><div class="b">${r.pct}%</div><div class="sm" style="color:${r.debt ? '#fca5a5' : '#86efac'}">${r.debt ? 'nợ ' + money(r.debt) : 'sạch nợ'}</div></div></div>`).join('')}
+  <div class="sec">⚙️ Cài đặt quỹ MoMo</div>
+  <form id="setForm" class="glass card">
+    <label>Mã QR MoMo (ảnh)<input type="file" name="qr" accept="image/*"></label>
+    ${st.qr ? `<img class="qrprev" src="${st.qr}" alt="QR hiện tại">` : '<div class="sm mut" style="margin:-6px 0 12px">Chưa có mã QR.</div>'}
+    <label>Tên chủ ví<input name="name" maxlength="50" value="${esc(st.name || '')}" placeholder="VD: QUỸ PHƯỜNG ĐỒNG XOÀI"></label>
+    <label>Số điện thoại MoMo<input name="phone" maxlength="15" inputmode="tel" value="${esc(st.phone || '')}"></label>
+    <button class="btn full" type="submit">Lưu cài đặt</button>
+  </form>`;
+}
+
+function userSheetHTML() {
+  const { uid, week } = S.uv, u = S.admin.find(x => x.uid === uid); if (!u) return '';
+  const now = Date.now(), days = [...Array(7)].map((_, i) => addDays(week, i)), wt = weekTasksOf(u.tasks, week);
+  const hours = [...new Set(wt.map(t => t.hour))].sort((a, b) => a - b);
+  const cnt = s => wt.filter(t => status(t, now) === s).length;
+  const debt = Math.max(0, fineOf(u.tasks) - paidOf(u.payments));
+  return `<div class="detail-hero"><div class="uava" style="width:56px;height:56px;font-size:20px">${esc(initials(u.displayName))}</div>
+    <div><h3>${esc(u.displayName)}</h3><div class="sm mut">@${esc(u.username)} · nợ quỹ: <b style="color:${debt ? '#fca5a5' : '#86efac'}">${money(debt)}</b></div></div></div>
+  <div class="weeknav"><button class="icon-btn" data-a="uweek" data-v="-1">‹</button><div class="wk glass"><b>${fmtD(days[0])} – ${fmtD(days[6])}</b><span class="sm mut">✅ ${cnt('done')} · ❌ ${cnt('failed')} · ⏳ ${cnt('upcoming') + cnt('active') + cnt('grace')}</span></div><button class="icon-btn" data-a="uweek" data-v="1">›</button></div>
+  <div class="legend"><span><i style="background:#22c55e"></i>Hoàn thành</span><span><i style="background:#ef4444"></i>Không hoàn thành</span><span><i style="background:#f59e0b"></i>Đang chờ tick</span><span><i style="background:#7b5cff"></i>Sắp tới</span></div>
+  ${hours.length ? `<div class="gridwrap"><table class="gt"><tr><th class="h"></th>${days.map((d, i) => `<th>${DOW[i]}<br><span class="mut">${d.getDate()}</span></th>`).join('')}</tr>
+    ${hours.map(h => `<tr><th class="h">${pad(h)}h</th>${days.map(d => { const t = wt.find(x => x.date === dk(d) && x.hour === h);
+      return t ? `<td class="${status(t, now)}" title="${esc(t.title)}">${esc(t.emoji || '📌')}<small>${esc(t.title)}</small></td>` : '<td></td>'; }).join('')}</tr>`).join('')}
+  </table></div>` : `<div class="empty-msg">Tuần này chưa lên lịch việc nào.</div>`}`;
+}
+
+/* ---------------- SHEET ---------------- */
+function openSheet(html) {
+  const ex = $('.overlay .sheet');
+  if (ex && !$('.overlay.out')) { ex.innerHTML = '<div class="grab"></div>' + html; return; }
+  $('#modal-root').innerHTML = `<div class="overlay" data-a="close"><div class="sheet" data-a="noop"><div class="grab"></div>${html}</div></div>`;
+  document.body.classList.add('lock');
+}
+function closeSheet() {
+  const o = $('.overlay'); if (!o) return;
+  o.classList.add('out');
+  setTimeout(() => { $('#modal-root').innerHTML = ''; document.body.classList.remove('lock'); }, 240);
+}
+
+function openTaskForm(date, hour, edit) {
+  const day = parseDK(date), now = Date.now(), wsd = mondayOf(day), di = dowIdx(day);
+  const start = slotMs(day, hour), deadline = start + HOUR + C.GRACE_MINUTES * MIN;
+  const repeat = edit ? '' : `<div class="lbl">Lặp lại cùng khung giờ các ngày trong tuần</div><div class="rep">${DOW.map((n, i) => {
+    const d = addDays(wsd, i), busy = S.tasks.some(t => t.date === dk(d) && t.hour === hour), ok = !busy && now < slotMs(d, hour) + HOUR;
+    return `<label class="${ok ? '' : 'dis'}"><input type="checkbox" name="days" value="${dk(d)}" ${i === di && ok ? 'checked' : ''} ${ok ? '' : 'disabled'}><span>${n}</span></label>`;
+  }).join('')}</div>`;
+  openSheet(`<h3>${edit ? '✏️ Sửa nhiệm vụ' : '✨ Nhiệm vụ mới'}</h3>
+  <div class="sm mut" style="margin-bottom:16px">${DOWF[di]} ${fmtD(day)} · ${pad(hour)}:00 – ${pad(hour + 1)}:00</div>
+  <form id="taskForm" data-date="${date}" data-hour="${hour}" data-edit="${edit ? esc(edit.id) : ''}">
+    <label>Tên công việc<input name="title" required maxlength="60" value="${esc(edit?.title || '')}" placeholder="VD: Họp giao ban, đọc tài liệu..."></label>
+    <div class="lbl">Biểu tượng</div>
+    <div class="emos">${EMOJIS.map((e, i) => `<label><input type="radio" name="emoji" value="${e}" ${(edit ? edit.emoji === e : i === 0) ? 'checked' : ''}><span>${e}</span></label>`).join('')}</div>
+    <div class="lbl">Màu nhãn</div>
+    <div class="cols">${COLORS.map((c, i) => `<label style="color:${c}"><input type="radio" name="color" value="${c}" ${(edit ? edit.color === c : i === 1) ? 'checked' : ''}><span style="background:${c}"></span></label>`).join('')}</div>
+    <label>Ghi chú (không bắt buộc)<textarea name="note" rows="2" maxlength="200">${esc(edit?.note || '')}</textarea></label>
+    ${repeat}
+    <div class="warnbox">⚠️ Phải bấm tick hoàn thành trong khung giờ, chậm nhất <b>${fmtT(deadline)}</b>. Không tick → ô chuyển đỏ và mất <b>${money(C.FINE_AMOUNT)}</b> vào quỹ.<br>Khi khung giờ đã bắt đầu thì <b>không xoá, không sửa</b> được nữa.</div>
+    <button class="btn full" type="submit">${edit ? 'Lưu thay đổi' : 'Thêm vào lịch 🎯'}</button>
+  </form>`);
+  setTimeout(() => $('#taskForm input[name=title]')?.focus(), 450);
+}
+
+function openDetail(t) {
+  const s = status(t), now = Date.now(), d = parseDK(t.date);
+  const label = { done:'<span class="chip ok">HOÀN THÀNH</span>', failed:'<span class="chip no">KHÔNG HOÀN THÀNH</span>', grace:'<span class="chip pend">CHỜ TICK</span>', active:'<span class="chip pend">ĐANG DIỄN RA</span>', upcoming:'<span class="chip" style="background:rgba(123,92,255,.25)">SẮP TỚI</span>' }[s];
+  openSheet(`<div class="detail-hero"><div class="emo" style="background:${esc(t.color)}33">${esc(t.emoji || '📌')}</div><div><h3>${esc(t.title)}</h3>${label}</div></div>
+    <div class="kv"><span>Thời gian</span><b>${DOWF[dowIdx(d)]} ${fmtD(d)} · ${pad(t.hour)}:00 – ${pad(t.hour + 1)}:00</b></div>
+    <div class="kv"><span>Hạn tick</span><b>${fmtT(t.deadline)}</b></div>
+    ${t.doneAt ? `<div class="kv"><span>Hoàn thành lúc</span><b>${fmtDT(t.doneAt)}</b></div>` : ''}
+    ${s === 'failed' ? `<div class="kv"><span>Tiền phạt</span><b style="color:#fca5a5">-${money(C.FINE_AMOUNT)}</b></div>` : ''}
+    ${t.note ? `<div style="margin-top:12px;padding:12px;border-radius:12px;background:var(--card);font-size:14px;line-height:1.5">${esc(t.note)}</div>` : ''}
+    <div class="btnrow">
+      ${now < t.start ? `<button class="btn ghost" data-a="editTask" data-id="${esc(t.id)}">✏️ Sửa</button><button class="btn no" data-a="delTask" data-id="${esc(t.id)}">🗑️ Xoá</button>` : ''}
+      ${s === 'active' || s === 'grace' || (s === 'done' && now < t.deadline) ? `<button class="btn ${t.done ? 'ghost' : 'ok'}" data-a="tick" data-id="${esc(t.id)}">${t.done ? '↩️ Bỏ tick' : '✓ Hoàn thành'}</button>` : ''}
+      <button class="btn ghost" data-a="close2">Đóng</button>
+    </div>`);
+}
+
+/* =====================================================================
+   HÀNH ĐỘNG
+   ===================================================================== */
+const A = {
+  noop() {},
+  close() { closeSheet(); }, close2() { closeSheet(); },
+  authMode(el) { S.authMode = el.dataset.v; renderAuth(); },
+  async logout() { if (!confirm('Đăng xuất khỏi ứng dụng?')) return; S.admin = null; await DB.logout(); },
+  tab(el) { S.tab = el.dataset.v; S.animate = true; if (S.tab === 'admin') S.admin = null; render(); scrollTo({ top:0, behavior:'smooth' }); },
+  week(el) { const v = +el.dataset.v; S.week = v ? addDays(S.week, 7 * v) : mondayOf(new Date()); if (!v) S.day = dowIdx(new Date()); S.animate = true; render(); },
+  day(el) { S.day = +el.dataset.v; S.animate = true; render(); },
+  add(el) { openTaskForm(el.dataset.d, +el.dataset.h); },
+  detail(el) { const t = S.tasks.find(x => x.id === el.dataset.id); if (t) openDetail(t); },
+  editTask(el) { const t = S.tasks.find(x => x.id === el.dataset.id); if (t) openTaskForm(t.date, t.hour, t); },
+  async delTask(el) {
+    const t = S.tasks.find(x => x.id === el.dataset.id); if (!t) return;
+    if (Date.now() >= t.start) return toast('Khung giờ đã bắt đầu, không xoá được', 'bad');
+    if (!confirm(`Xoá "${t.title}"?`)) return;
+    await DB.deleteTask(S.me.uid, t.id); S.tasks = S.tasks.filter(x => x.id !== t.id);
+    closeSheet(); toast('Đã xoá 🗑️', 'warn'); render();
+  },
+  async tick(el) {
+    const t = S.tasks.find(x => x.id === el.dataset.id); if (!t) return;
+    const s = status(t);
+    if (s === 'upcoming') { buzz(40); return toast(`🔒 Chưa đến giờ – mở tick lúc ${pad(t.hour)}:00`, 'warn'); }
+    if (s === 'failed') { buzz([40, 40, 40]); return toast('Đã quá hạn tick ❌', 'bad'); }
+    if (s === 'done' && Date.now() >= t.deadline) return toast('Đã chốt, không bỏ tick được', 'warn');
+    const nd = !t.done, r = el.getBoundingClientRect(), x = r.left + r.width / 2, y = r.top + r.height / 2;
+    el.disabled = true;
+    await DB.updateTask(S.me.uid, t.id, { done:nd, doneAt:nd ? Date.now() : null });
+    t.done = nd; t.doneAt = nd ? Date.now() : null;
+    if ($('.overlay')) closeSheet();
+    if (nd) {
+      burst(x, y, 70); floatText('+10 XP', x, y - 10); buzz(35); S.justDone = t.id;
+      const dayT = S.tasks.filter(z => z.date === t.date);
+      if (dayT.every(z => z.done)) { setTimeout(celebrate, 300); toast('🎉 Hoàn thành tất cả việc trong ngày!'); }
+      else toast(CHEERS[Math.floor(Math.random() * CHEERS.length)]);
+    } else toast('Đã bỏ tick ↩️', 'warn');
+    render(); S.justDone = null;
+  },
+  async copyWeek() {
+    const a = addDays(S.week, -7).getTime(), b = S.week.getTime(), now = Date.now();
+    const src = S.tasks.filter(t => t.start >= a && t.start < b);
+    if (!src.length) return toast('Tuần trước chưa có nhiệm vụ nào', 'warn');
+    if (!confirm(`Chép ${src.length} nhiệm vụ của tuần trước sang tuần đang xem?\n(Bỏ qua khung giờ đã qua hoặc đã có việc)`)) return;
+    let n = 0;
+    for (const s of src) {
+      const d = addDays(parseDK(s.date), 7), date = dk(d), start = slotMs(d, s.hour);
+      if (now >= start + HOUR || S.tasks.some(t => t.date === date && t.hour === s.hour)) continue;
+      const t = { title:s.title, emoji:s.emoji, color:s.color, note:s.note || '', date, hour:s.hour, start, deadline:start + HOUR + C.GRACE_MINUTES * MIN, done:false, doneAt:null };
+      t.id = await DB.addTask(S.me.uid, t); S.tasks.push(t); n++;
+    }
+    toast(n ? `📋 Đã chép ${n} nhiệm vụ` : 'Không có khung giờ nào chép được', n ? 'ok' : 'warn');
+    if (n) burst(innerWidth / 2, innerHeight / 2, 60);
+    S.animate = true; render();
+  },
+  copy(el) { navigator.clipboard?.writeText(el.dataset.v).then(() => toast('Đã chép nội dung chuyển khoản 📋'), () => toast(el.dataset.v, 'warn')); },
+  payClaim(el) {
+    openSheet(`<h3>💸 Báo đã chuyển khoản</h3><div class="sm mut" style="margin-bottom:16px">Admin sẽ kiểm tra MoMo và xác nhận.</div>
+    <form id="payForm"><label>Số tiền đã chuyển (đồng)<input name="amount" type="number" inputmode="numeric" min="1000" step="1000" required value="${+el.dataset.v}"></label>
+    <button class="btn full" type="submit">Gửi xác nhận</button></form>`);
+  },
+  async payOk(el) { await setPay(el, 'confirmed'); },
+  async payNo(el) { if (confirm('Từ chối khoản nộp này?')) await setPay(el, 'rejected'); },
+  reloadAdmin() { S.admin = null; S.animate = true; render(); },
+  viewUser(el) { S.uv = { uid:el.dataset.uid, week:mondayOf(new Date()) }; openSheet(userSheetHTML()); },
+  uweek(el) { S.uv.week = addDays(S.uv.week, 7 * +el.dataset.v); openSheet(userSheetHTML()); }
+};
+async function setPay(el, status) {
+  const u = S.admin.find(x => x.uid === el.dataset.uid), p = u?.payments.find(x => x.id === el.dataset.id); if (!p) return;
+  await DB.updatePayment(u.uid, p.id, { status, reviewedAt:Date.now() }); p.status = status;
+  if (u.uid === S.me.uid) { const mp = S.payments.find(x => x.id === p.id); if (mp) mp.status = status; }
+  if (status === 'confirmed') { const r = el.getBoundingClientRect(); burst(r.left, r.top, 50, ['#facc15','#fde047','#f59e0b','#fff']); floatText('+' + money(p.amount), r.left, r.top, '#fde047'); toast('Đã xác nhận nộp quỹ ✅'); }
+  else toast('Đã từ chối', 'warn');
+  render();
+}
+
+const FORMS = {
+  async authForm(f, fd) {
+    const u = String(fd.get('u') || '').trim().toLowerCase(), p = String(fd.get('p') || '');
+    if (!/^[a-z0-9_]{3,20}$/.test(u)) return toast('Tên đăng nhập 3–20 ký tự: chữ thường không dấu, số, gạch dưới', 'bad');
+    S.justLogged = true;
+    if (S.authMode === 'reg') await DB.register(u, p, String(fd.get('name') || '').trim() || u);
+    else await DB.login(u, p);
+  },
+  async taskForm(f, fd) {
+    const title = String(fd.get('title') || '').trim(); if (!title) return;
+    const base = { title, emoji:fd.get('emoji') || '📌', color:fd.get('color') || COLORS[1], note:String(fd.get('note') || '').trim() };
+    const hour = +f.dataset.hour;
+    if (f.dataset.edit) {
+      const t = S.tasks.find(x => x.id === f.dataset.edit);
+      if (!t || Date.now() >= t.start) return toast('Khung giờ đã bắt đầu, không sửa được', 'bad');
+      await DB.updateTask(S.me.uid, t.id, base); Object.assign(t, base); toast('Đã cập nhật ✏️');
+    } else {
+      const dates = fd.getAll('days');
+      if (!dates.length) return toast('Chọn ít nhất 1 ngày', 'bad');
+      for (const d of dates) {
+        if (S.tasks.some(t => t.date === d && t.hour === hour)) continue;
+        const start = slotMs(parseDK(d), hour);
+        if (Date.now() >= start + HOUR) continue;
+        const t = { ...base, date:d, hour, start, deadline:start + HOUR + C.GRACE_MINUTES * MIN, done:false, doneAt:null };
+        t.id = await DB.addTask(S.me.uid, t); S.tasks.push(t);
+      }
+      toast(`🎯 Đã thêm ${dates.length} nhiệm vụ`); burst(innerWidth / 2, innerHeight * .6, 45);
+    }
+    closeSheet(); render();
+  },
+  async payForm(f, fd) {
+    const amount = Math.round(+fd.get('amount'));
+    if (!(amount > 0)) return toast('Số tiền không hợp lệ', 'bad');
+    const p = { amount, status:'pending', createdAt:Date.now(), username:S.me.username, displayName:S.me.displayName };
+    p.id = await DB.addPayment(S.me.uid, p); S.payments.unshift(p);
+    closeSheet(); toast('Đã gửi, chờ admin xác nhận ⏳'); burst(innerWidth / 2, innerHeight / 2, 40, ['#facc15','#fde047','#fff']); render();
+  },
+  async setForm(f, fd) {
+    const patch = { name:String(fd.get('name') || '').trim(), phone:String(fd.get('phone') || '').trim() };
+    const file = fd.get('qr');
+    if (file && file.size) patch.qr = await shrinkImage(file, 700);
+    await DB.saveSettings(patch); S.settings = { ...S.settings, ...patch };
+    toast('Đã lưu cài đặt quỹ ✅'); render();
+  }
+};
+function shrinkImage(file, max) {
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, max / Math.max(img.width, img.height)), c = document.createElement('canvas');
+      c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const g = c.getContext('2d'); g.fillStyle = '#fff'; g.fillRect(0, 0, c.width, c.height); g.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); res(c.toDataURL('image/jpeg', .9));
+    };
+    img.onerror = () => rej(new Error('Không đọc được ảnh'));
+    img.src = url;
+  });
+}
+
+document.addEventListener('click', async e => {
+  const el = e.target.closest('[data-a]'); if (!el) return;
+  const fn = A[el.dataset.a]; if (!fn) return;
+  if (el.dataset.a !== 'noop') e.stopPropagation();
+  try { await fn(el, e); } catch (err) { console.error(err); toast(errMsg(err), 'bad'); if (el.disabled !== undefined) el.disabled = false; }
+});
+document.addEventListener('submit', async e => {
+  e.preventDefault();
+  const f = e.target, h = FORMS[f.id]; if (!h) return;
+  const btn = f.querySelector('[type=submit]'); if (btn) btn.disabled = true;
+  try { await h(f, new FormData(f)); } catch (err) { console.error(err); toast(errMsg(err), 'bad'); }
+  finally { if (btn) btn.disabled = false; }
+});
+
+/* ---------- theo dõi việc bị trễ hạn ---------- */
+function checkFailures(initial) {
+  if (!S.me) return;
+  const key = 'tgb_seen_' + S.me.uid; let seen;
+  try { seen = new Set(JSON.parse(localStorage.getItem(key) || '[]')); } catch { seen = new Set(); }
+  const fresh = S.tasks.filter(t => status(t) === 'failed' && !seen.has(t.id));
+  if (!fresh.length) return;
+  fresh.forEach(t => { seen.add(t.id); S.shake.add(t.id); });
+  localStorage.setItem(key, JSON.stringify([...seen].slice(-2000)));
+  setTimeout(() => toast(fresh.length === 1 ? `💸 Trễ hạn "${fresh[0].title}" · -${money(C.FINE_AMOUNT)}` : `💸 ${fresh.length} việc trễ hạn · -${money(fresh.length * C.FINE_AMOUNT)}`, 'bad'), initial ? 900 : 0);
+  buzz([60, 40, 60]);
+  setTimeout(() => S.shake.clear(), 1500);
+}
+setInterval(() => {
+  if (!S.me) return;
+  const before = S.shake.size; checkFailures(false);
+  if (!$('.overlay') && (S.tab === 'cal' || S.shake.size !== before)) render();
+}, 30000);
+document.addEventListener('visibilitychange', () => { if (!document.hidden && S.me && !$('.overlay')) { checkFailures(false); render(); } });
+
+/* =====================================================================
+   KHỞI ĐỘNG
+   ===================================================================== */
+(async () => {
+  $('#app').innerHTML = loaderHTML;
+  try { DB = useFirebase ? await makeFirebase() : makeLocal(); await DB.init?.(); }
+  catch (e) { console.error(e); $('#app').innerHTML = `<div class="wrap"><div class="glass card" style="margin-top:30vh">⚠️ Không kết nối được Firebase.<br><span class="sm mut">${esc(e.message)}<br>Kiểm tra lại file config.js.</span></div></div>`; return; }
+  DB.onAuth(async u => {
+    S.me = u; S.admin = null;
+    if (!u) { S.tasks = []; S.payments = []; S.tab = 'cal'; S.animate = true; closeSheet(); return render(); }
+    $('#app').innerHTML = loaderHTML;
+    try { [S.tasks, S.payments, S.settings] = await Promise.all([DB.listTasks(u.uid), DB.listPayments(u.uid), DB.getSettings()]); }
+    catch (e) { console.error(e); toast(errMsg(e), 'bad'); }
+    S.week = mondayOf(new Date()); S.day = dowIdx(new Date()); S.animate = true;
+    checkFailures(true); render();
+    if (S.justLogged) { S.justLogged = false; setTimeout(celebrate, 200); toast(`Chào ${u.displayName}! 👋`); }
+    setTimeout(() => $('.time.now')?.scrollIntoView({ behavior:'smooth', block:'center' }), 700);
+  });
+})();
+</script>
+</body>
+</html>
