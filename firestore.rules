@@ -2,7 +2,7 @@ rules_version = '2';
 // LUẬT BẢO MẬT FIRESTORE – dán toàn bộ vào Firebase Console > Firestore Database > Rules > Publish
 // Lưu ý: nếu đổi ADMIN_USERNAME, EMAIL_DOMAIN hoặc GRACE_MINUTES trong config.js thì sửa tương ứng ở đây.
 //   - Email admin = ADMIN_USERNAME@EMAIL_DOMAIN  (mặc định admin@tgb.app)
-//   - Hạn tick = giờ bắt đầu + 60 phút khung giờ + GRACE_MINUTES (mặc định 60 + 60 = 120 phút)
+//   - Hạn tick do người dùng chọn cho từng việc: tối đa 24 giờ sau khi việc kết thúc
 service cloud.firestore {
   match /databases/{database}/documents {
 
@@ -23,27 +23,33 @@ service cloud.firestore {
         && request.resource.data.username == request.auth.token.email.split('@')[0];
       allow update: if (isOwner(uid) && request.resource.data.username == resource.data.username) || isAdmin();
 
-      // Nhiệm vụ
+      // Nhiệm vụ: có giờ bắt đầu (start), kết thúc (end), hạn tick (deadline)
+      function validTimes(d) {
+        return d.start is timestamp && d.end is timestamp && d.deadline is timestamp
+          && d.end > d.start && d.end <= d.start + duration.value(20, 'h')
+          && d.deadline >= d.end && d.deadline <= d.end + duration.value(24, 'h');
+      }
       match /tasks/{taskId} {
         allow read: if isOwner(uid) || isAdmin();
 
-        // Chỉ được tạo việc cho khung giờ chưa kết thúc; hạn tick cố định; mặc định chưa xong
+        // Chỉ tạo việc chưa kết thúc; mặc định chưa hoàn thành
         allow create: if isOwner(uid)
-          && request.resource.data.start is timestamp
-          && request.resource.data.start > request.time - duration.value(1, 'h')
-          && request.resource.data.deadline == request.resource.data.start + duration.value(120, 'm')
+          && validTimes(request.resource.data)
+          && request.resource.data.end > request.time
           && request.resource.data.done == false;
 
-        // Sửa/tick: trước hạn chót; không được đổi giờ, hạn; chỉ tick khi đã đến giờ
+        // Sửa/tick: trước hạn chót; không đổi giờ; chỉ đổi hạn tick khi việc chưa bắt đầu;
+        // chỉ tick khi việc đã bắt đầu
         allow update: if isOwner(uid)
           && request.time < resource.data.deadline
+          && validTimes(request.resource.data)
           && request.resource.data.start == resource.data.start
-          && request.resource.data.deadline == resource.data.deadline
+          && request.resource.data.end == resource.data.end
           && request.resource.data.date == resource.data.date
-          && request.resource.data.hour == resource.data.hour
+          && (request.resource.data.deadline == resource.data.deadline || request.time < resource.data.start)
           && (request.resource.data.done == resource.data.done || request.time >= resource.data.start);
 
-        // Chỉ xoá được khi khung giờ chưa bắt đầu (admin xoá được mọi lúc)
+        // Chỉ xoá được khi việc chưa bắt đầu (admin xoá được mọi lúc)
         allow delete: if (isOwner(uid) && request.time < resource.data.start) || isAdmin();
       }
 

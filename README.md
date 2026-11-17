@@ -57,8 +57,8 @@ Muốn dùng tên admin khác, ví dụ `bithu`, thì sửa cả 2 chỗ:
 
 ## Quy tắc hoạt động
 
-- Mỗi ngày chia khung 1 giờ, từ 5:00 đến 24:00. Chỉ thêm được việc vào **ô trống** của khung giờ chưa kết thúc. Có thể lặp lại cùng giờ cho nhiều ngày trong tuần và chép lịch tuần trước.
-- **Tick hoàn thành** mở từ lúc khung giờ bắt đầu đến **60 phút sau khi khung giờ kết thúc**. Ví dụ việc 8:00–9:00 phải tick trước 10:00.
+- Mỗi ngày chia ô **30 phút**, từ 4:00 đến 24:00. Bấm ô trống để thêm việc, chọn **thời lượng** (30 phút, 1 giờ, 2 giờ...); việc dài sẽ chiếm liền nhiều ô. Có thể lặp lại cùng giờ cho nhiều ngày trong tuần và chép lịch tuần trước.
+- **Hạn tick chọn riêng cho từng việc**: 30 phút, 1–12 giờ sau khi xong, hoặc đến 23:59 cùng ngày. Ví dụ đi học 7:00–11:00, chọn "Đến 23:59" thì về nhà tick vẫn kịp. Tick mở từ lúc việc bắt đầu.
 - Trạng thái ô: 🔒 sắp tới · viền cầu vồng = đang diễn ra · 🟧 hết giờ, đang chờ tick · 🟩 **hoàn thành** · 🟥 **không hoàn thành, -10.000đ**.
 - Khung giờ đã bắt đầu thì **không xóa, không sửa** được việc đó. Điều này chặn cả ở máy chủ, nên không lách được để né phạt.
 - **Nộp quỹ:** tab 💰 Quỹ hiện số tiền đang nợ, mã QR MoMo và nội dung chuyển khoản `QUY <TÊN ĐĂNG NHẬP>`. Người dùng chuyển xong bấm **"Tôi đã chuyển khoản"**. Admin đối chiếu với lịch sử MoMo rồi bấm ✓ để xác nhận.
@@ -73,6 +73,7 @@ Thu tự động chỉ làm được qua cổng thanh toán doanh nghiệp (MoMo
 | Thông số | Mặc định | Ý nghĩa |
 |---|---|---|
 | `FINE_AMOUNT` | 10000 | Tiền phạt mỗi việc (đồng) |
-| `GRACE_MINUTES` | 60 | Số phút được tick sau khi hết khung giờ. Nếu đổi, sửa số `120` trong `firestore.rules` thành `60 + GRACE_MINUTES` |
-| `START_HOUR` / `END_HOUR` | 5 / 24 | Giờ bắt đầu / kết thúc trong ngày |
+| `GRACE_MINUTES` | 60 | Hạn tick mặc định khi tạo việc (người dùng chọn lại được) |
+| `START_HOUR` / `END_HOUR` | 4 / 24 | Giờ bắt đầu / kết thúc trong ngày |
+| `SLOT_MINUTES` | 30 | Độ dài mỗi ô (phút) |
 | `APP_NAME` | Thời Gian Biểu | Tên hiển thị |
