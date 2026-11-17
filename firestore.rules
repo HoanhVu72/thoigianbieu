@@ -1,16 +1,30 @@
 rules_version = '2';
 // LUẬT BẢO MẬT FIRESTORE – dán toàn bộ vào Firebase Console > Firestore Database > Rules > Publish
 // Lưu ý: nếu đổi ADMIN_USERNAME, EMAIL_DOMAIN hoặc GRACE_MINUTES trong config.js thì sửa tương ứng ở đây.
-//   - Email admin = ADMIN_USERNAME@EMAIL_DOMAIN  (mặc định admin@tgb.app)
+//   - Tên admin = ADMIN_USERNAME (mặc định 'admin'), đuôi email nội bộ = EMAIL_DOMAIN (mặc định tgb.app)
 //   - Hạn tick do người dùng chọn cho từng việc: tối đa 24 giờ sau khi việc kết thúc
 service cloud.firestore {
   match /databases/{database}/documents {
 
     function signedIn() { return request.auth != null; }
-    function isAdmin() { return signedIn() && request.auth.token.email == 'admin@tgb.app'; }
+    // Admin = người có hồ sơ với tên đăng nhập 'admin' (vẫn đúng sau khi gắn email khôi phục)
+    function isAdmin() { return signedIn() && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.username == 'admin'; }
     function isOwner(uid) { return signedIn() && request.auth.uid == uid; }
 
     // Cài đặt quỹ (mã QR MoMo, tên, số điện thoại): ai đăng nhập cũng xem được, chỉ admin sửa
+    // Bảng tên đăng nhập → email (để đăng nhập bằng tên & gửi link quên mật khẩu)
+    match /usernames/{name} {
+      allow get: if true;
+      allow create: if signedIn()
+        && request.resource.data.uid == request.auth.uid
+        && request.auth.token.email == name + '@tgb.app'
+        && request.resource.data.email == request.auth.token.email;
+      allow update: if signedIn()
+        && resource.data.uid == request.auth.uid
+        && request.resource.data.uid == resource.data.uid;
+      allow delete: if isAdmin();
+    }
+
     match /settings/{id} {
       allow read: if signedIn();
       allow write: if isAdmin();
@@ -20,7 +34,8 @@ service cloud.firestore {
       allow read: if isOwner(uid) || isAdmin();
       // Tên đăng nhập trong hồ sơ phải trùng với email đăng nhập (chống tự xưng admin)
       allow create: if isOwner(uid)
-        && request.resource.data.username == request.auth.token.email.split('@')[0];
+        && request.auth.token.email == request.resource.data.username + '@tgb.app'
+        && get(/databases/$(database)/documents/usernames/$(request.resource.data.username)).data.uid == request.auth.uid;
       allow update: if (isOwner(uid) && request.resource.data.username == resource.data.username) || isAdmin();
 
       // Nhiệm vụ: có giờ bắt đầu (start), kết thúc (end), hạn tick (deadline)

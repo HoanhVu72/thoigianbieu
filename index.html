@@ -93,10 +93,28 @@ h1.big{font-size:34px;font-weight:900;margin:8px 0 4px}
 .avawrap{position:relative;flex:none}
 .bigava{width:120px;height:120px;border-radius:36px;margin:6px auto 16px;font-size:40px}
 .bigava.has-img img{inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);border-radius:32px}
+.linkbtn{display:block;margin:14px auto 0;border:0;background:none;color:#c4b5fd;font-weight:700;font-size:14px;text-decoration:underline;text-underline-offset:3px}
+.tier{display:inline-flex;align-items:center;gap:4px;padding:3px 10px;border-radius:99px;font-size:12px;font-weight:900;color:#fff;text-shadow:0 1px 2px #0007;box-shadow:0 4px 14px -4px rgba(0,0,0,.6);white-space:nowrap;vertical-align:middle}
+.tier.sm{font-size:10px;padding:2px 7px}
+.tier.rainbow,.tierc.rainbow{background-size:300% 300%!important;animation:shine 4s linear infinite}
+.pcard{position:relative;border-radius:24px;padding:16px;text-align:center;overflow:hidden;border:1px solid var(--line);margin:4px 0 10px}
+.pcard::before{content:'';position:absolute;inset:0;background:var(--g);opacity:.28}
+.pcard::after{content:'';position:absolute;inset:-40%;background:conic-gradient(from var(--a),transparent 0 75%,rgba(255,255,255,.18),transparent);animation:spin 5s linear infinite}
+.pcard>*{position:relative;z-index:1}
+.pcard .bigava{margin:4px auto 10px}
+.pstats{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:14px 0 12px}
+.pstats div{background:rgba(0,0,0,.28);border-radius:12px;padding:8px 4px}
+.pstats b{display:block;font-size:18px}.pstats span{font-size:11px;color:var(--mut)}
+.tiers{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.tierc{border-radius:14px;padding:10px 4px;text-align:center;font-size:12.5px;font-weight:900;color:#fff;text-shadow:0 1px 2px #0007;transition:transform .2s}
+.tierc .te{font-size:26px;display:block;margin-bottom:2px}
+.tierc small{display:block;font-weight:600;opacity:.9;font-size:10.5px}
+.tierc.locked{background:rgba(255,255,255,.05)!important;color:var(--mut);text-shadow:none}
+.tierc.cur{outline:2px solid #fff;transform:scale(1.05);box-shadow:0 0 22px rgba(255,255,255,.35)}
 .hint{font-size:12.5px;color:var(--mut);line-height:1.6;background:var(--card);border-radius:12px;padding:10px 12px;margin:-4px 0 16px}
 .name{font-weight:800;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lv{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:11.5px;font-weight:800}
-.lv>span:first-child{background:linear-gradient(135deg,#facc15,#f97316);color:#1a1300;padding:1px 7px;border-radius:7px}
+.lv>span.lvb{background:linear-gradient(135deg,#facc15,#f97316);color:#1a1300;padding:1px 7px;border-radius:7px}
 .bar{flex:1;height:7px;border-radius:9px;background:rgba(255,255,255,.1);overflow:hidden;max-width:140px}
 .bar i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,var(--pri3),var(--pri2),var(--pri1));animation:grow 1s cubic-bezier(.2,.8,.2,1) both}
 @keyframes grow{from{width:0!important}}
@@ -373,6 +391,43 @@ function levelOf(tasks) {
   const a = 40 * (lv-1) ** 2, b = 40 * lv ** 2;
   return { xp, lv, pct: Math.round((xp - a) / (b - a) * 100) };
 }
+/* --- cấp chuỗi (streak) --- */
+const TIERS = [
+  { d:0,   n:'Mầm Non',     e:'🌱', c:['#94a3b8','#475569'] },
+  { d:3,   n:'Đốm Lửa',     e:'🔥', c:['#fdba74','#ea580c'] },
+  { d:7,   n:'Tia Chớp',    e:'⚡', c:['#fde047','#d97706'] },
+  { d:10,  n:'Sóng Thần',   e:'🌊', c:['#67e8f9','#0284c7'] },
+  { d:20,  n:'Cuồng Phong', e:'🌪️', c:['#5eead4','#4f46e5'] },
+  { d:30,  n:'Kim Cương',   e:'💎', c:['#bae6fd','#2563eb'] },
+  { d:50,  n:'Rồng Lửa',    e:'🐉', c:['#fca5a5','#b91c1c'] },
+  { d:75,  n:'Đế Vương',    e:'👑', c:['#fef08a','#b45309'] },
+  { d:100, n:'Thiên Hà',    e:'🌌', c:['#d8b4fe','#4338ca'] },
+  { d:200, n:'Bất Tử',      e:'☄️', c:['#f9a8d4','#7c3aed'] },
+  { d:365, n:'Huyền Thoại', e:'🏆', c:['#ff4ecd','#7b5cff','#22d3ee','#facc15'], rainbow:true }
+];
+const tierOf = n => [...TIERS].reverse().find(t => n >= t.d);
+const nextTier = n => TIERS.find(t => t.d > n);
+const tierGrad = t => `linear-gradient(135deg,${t.c.join(',')})`;
+const tierBadge = (n, small) => { const t = tierOf(n); return `<span class="tier ${t.rainbow ? 'rainbow' : ''} ${small ? 'sm' : ''}" style="background:${tierGrad(t)}">${t.e} ${t.n}</span>`; };
+function bestStreak(tasks) {
+  const now = Date.now(), by = {};
+  tasks.forEach(t => (by[t.date] ??= []).push(status(t, now)));
+  let best = 0, cur = 0, prev = null;
+  for (const k of Object.keys(by).sort()) {
+    const ok = by[k].every(s => s === 'done');
+    if (ok) { cur = prev && dk(addDays(parseDK(prev), 1)) === k ? cur + 1 : 1; best = Math.max(best, cur); prev = k; }
+    else { cur = 0; prev = null; }
+  }
+  return Math.max(best, streak(tasks));
+}
+function checkTierUp() {
+  if (!S.me) return;
+  const n = streak(S.tasks), t = tierOf(n), key = 'tgb_tier_' + S.me.uid;
+  let prev = 0; try { prev = +(localStorage.getItem(key) || 0); } catch {}
+  if (t.d === prev) return;
+  try { localStorage.setItem(key, t.d); } catch {}
+  if (t.d > prev && t.d > 0) { setTimeout(celebrate, 400); toast(`🎉 Lên cấp ${t.e} ${t.n}! Chuỗi ${n} ngày liên tiếp`); }
+}
 const greet = () => { const h = new Date().getHours(); return h < 11 ? 'Chào buổi sáng' : h < 14 ? 'Chào buổi trưa' : h < 18 ? 'Chào buổi chiều' : 'Chào buổi tối'; };
 
 const ERR = {
@@ -380,6 +435,8 @@ const ERR = {
   'auth/wrong-password':'Sai mật khẩu','auth/email-already-in-use':'Tên đăng nhập này đã có người dùng',
   'auth/weak-password':'Mật khẩu tối thiểu 6 ký tự','auth/invalid-email':'Tên đăng nhập không hợp lệ',
   'auth/too-many-requests':'Thử sai quá nhiều lần, vui lòng đợi ít phút','auth/network-request-failed':'Mất kết nối mạng',
+  'no-user':'Không tìm thấy tên đăng nhập này','no-recovery':'Tài khoản này chưa gắn email khôi phục nên không gửi được link. Hãy nhờ admin hỗ trợ.',
+  'auth/requires-recent-login':'Vì bảo mật, hãy đăng xuất rồi đăng nhập lại, sau đó làm lại bước này','auth/operation-not-allowed':'Firebase chưa cho phép đổi email (xem hướng dẫn)',
   'permission-denied':'Không có quyền, hoặc đã quá thời gian cho phép','unavailable':'Mất kết nối máy chủ, thử lại sau'
 };
 const errMsg = e => ERR[e?.code] || ERR[e?.message] || e?.message || 'Có lỗi xảy ra';
@@ -424,7 +481,8 @@ function floatText(txt, x, y, color = '#86efac') {
 }
 function toast(msg, type = 'ok') {
   const el = document.createElement('div'); el.className = 'toast ' + type; el.textContent = msg;
-  $('#toasts').appendChild(el); setTimeout(() => el.remove(), 3300);
+  if (msg.length > 60) el.style.animation = 'tin .4s cubic-bezier(.2,1.4,.3,1) both, tout .35s 5.5s forwards';
+  $('#toasts').appendChild(el); setTimeout(() => el.remove(), msg.length > 60 ? 6000 : 3300);
 }
 const buzz = p => { try { navigator.vibrate && navigator.vibrate(p); } catch {} };
 
@@ -487,6 +545,7 @@ async function makeFirebase() {
   const [A, AU, FS] = await Promise.all([import(B + 'firebase-app.js'), import(B + 'firebase-auth.js'), import(B + 'firebase-firestore.js')]);
   const app = A.initializeApp(C.firebase);
   const auth = AU.getAuth(app), db = FS.getFirestore(app);
+  auth.languageCode = 'vi';
   const { doc, getDoc, setDoc, getDocs, collection, addDoc, updateDoc, deleteDoc, Timestamp } = FS;
   const email = u => `${u}@${C.EMAIL_DOMAIN}`;
   const toMs = v => v && typeof v.toMillis === 'function' ? v.toMillis() : v;
@@ -504,14 +563,47 @@ async function makeFirebase() {
           let d = s.exists() ? s.data() : null;
           if (!d) {
             const username = fu.email.split('@')[0];
+            // giữ chỗ tên đăng nhập trước, rồi mới tạo hồ sơ
+            await setDoc(doc(db, 'usernames', username), { uid:fu.uid, email:fu.email });
             d = { username, displayName:pendingName || username, createdAt:Date.now() };
             await setDoc(ref, d); pendingName = null;
+          } else {
+            // đồng bộ bảng tên đăng nhập → email (sau khi gắn email khôi phục)
+            try {
+              const mref = doc(db, 'usernames', d.username), ms = await getDoc(mref);
+              if (!ms.exists()) { if (fu.email === email(d.username)) await setDoc(mref, { uid:fu.uid, email:fu.email }); }
+              else if (ms.data().email !== fu.email) await updateDoc(mref, { email:fu.email, pendingEmail:null });
+            } catch (e) { console.warn('usernames sync', e); }
           }
-          cb(mkUser(fu.uid, d));
-        } catch (e) { console.error(e); toast(errMsg(e), 'bad'); cb(null); }
+          cb({ ...mkUser(fu.uid, d), loginEmail:fu.email });
+        } catch (e) {
+          console.error(e);
+          toast(e?.code === 'permission-denied' ? 'Tên đăng nhập này đã có người dùng hoặc luật Firebase chưa cập nhật' : errMsg(e), 'bad');
+          try { await AU.signOut(auth); } catch {}
+          cb(null);
+        }
       });
     },
-    async login(u, p) { await AU.signInWithEmailAndPassword(auth, email(u), p); },
+    async login(u, p) {
+      if (u.includes('@')) return void await AU.signInWithEmailAndPassword(auth, u, p);
+      let m = null; try { const ms = await getDoc(doc(db, 'usernames', u)); if (ms.exists()) m = ms.data(); } catch {}
+      const tries = [...new Set([m?.email || email(u), m?.pendingEmail, email(u)].filter(Boolean))];
+      let err;
+      for (const e of tries) { try { await AU.signInWithEmailAndPassword(auth, e, p); return; } catch (x) { err = x; if (x.code === 'auth/too-many-requests') break; } }
+      throw err;
+    },
+    async sendReset(id) {
+      let em = id.includes('@') ? id : null;
+      if (!em) { const ms = await getDoc(doc(db, 'usernames', id)); em = ms.exists() ? ms.data().email : null; }
+      if (!em) { const e = new Error('no-user'); e.code = 'no-user'; throw e; }
+      if (em.endsWith('@' + C.EMAIL_DOMAIN)) { const e = new Error('no-recovery'); e.code = 'no-recovery'; throw e; }
+      await AU.sendPasswordResetEmail(auth, em); return em;
+    },
+    async setRecoveryEmail(username, em) {
+      await AU.verifyBeforeUpdateEmail(auth.currentUser, em);
+      await updateDoc(doc(db, 'usernames', username), { pendingEmail:em });
+    },
+    currentEmail() { return auth.currentUser?.email || ''; },
     async register(u, p, name) { pendingName = name; await AU.createUserWithEmailAndPassword(auth, email(u), p); },
     async logout() { await AU.signOut(auth); },
     async listUsers() { const s = await getDocs(collection(db, 'users')); return s.docs.map(d => mkUser(d.id, d.data())); },
@@ -570,21 +662,22 @@ function renderAuth() {
         <button data-a="authMode" data-v="reg" class="${reg ? 'on' : ''}">Đăng ký</button></div>
       <form id="authForm" autocomplete="on">
         ${reg ? `<label>Họ tên hiển thị<input name="name" required maxlength="40" placeholder="VD: Nguyễn Văn An"></label>` : ''}
-        <label>Tên đăng nhập<input name="u" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="chữ thường, số, gạch dưới"></label>
+        <label>${reg ? 'Tên đăng nhập' : 'Tên đăng nhập hoặc email'}<input name="u" required autocomplete="username" autocapitalize="none" autocorrect="off" spellcheck="false" placeholder="chữ thường, số, gạch dưới"></label>
         <label>Mật khẩu<input name="p" type="password" required minlength="6" autocomplete="${reg ? 'new-password' : 'current-password'}" placeholder="tối thiểu 6 ký tự"></label>
         <button class="btn full" type="submit">${reg ? 'Tạo tài khoản ✨' : 'Vào ứng dụng 🚀'}</button>
       </form>
+      ${reg ? '' : `<button class="linkbtn" data-a="forgot">Quên mật khẩu?</button>`}
       ${DB.mode === 'demo' ? `<div class="note">⚙️ Đang ở <b>chế độ thử</b>: dữ liệu chỉ lưu trên máy này.<br>Tài khoản admin thử: <b>${esc(C.ADMIN_USERNAME)}</b> / <b>admin123</b></div>` : ''}
     </div></div>`;
 }
 
 function header() {
-  const L = levelOf(S.tasks);
+  const L = levelOf(S.tasks), st = streak(S.tasks), T = tierOf(st);
   return `<header class="top">
-    <div class="avawrap" data-a="avatar">${avaHTML(S.me, 'ava')}<span class="ava-edit">✎</span></div>
+    <div class="avawrap" data-a="avatar">${avaHTML(S.me, 'ava', `background:conic-gradient(from var(--a),${T.c.join(',')},${T.c[0]})`)}<span class="ava-edit">✎</span></div>
     <div class="hi"><div class="mut sm">${greet()},</div>
       <div class="name">${esc(S.me.displayName)} ${S.me.isAdmin ? '<span class="chip adm">ADMIN</span>' : ''}</div>
-      <div class="lv"><span>Lv ${L.lv}</span><div class="bar"><i style="width:${L.pct}%"></i></div><span class="mut">${L.xp} XP</span></div></div>
+      <div class="lv"><span data-a="avatar" style="all:unset;cursor:pointer">${tierBadge(st, true)}</span><span class="lvb">Lv ${L.lv}</span><div class="bar"><i style="width:${L.pct}%"></i></div><span class="mut">${L.xp} XP</span></div></div>
     <button class="icon-btn" data-a="logout" aria-label="Đăng xuất">⏻</button>
   </header><div class="quote">“${esc(S.quote)}”</div>`;
 }
@@ -627,7 +720,7 @@ function viewCal() {
       <svg class="ring" viewBox="0 0 64 64"><circle class="tr" cx="32" cy="32" r="26"/><circle class="pr" cx="32" cy="32" r="26" style="--off:${163.36 * (1 - pct / 100)}"/><text x="32" y="33">${pct}%</text></svg>
       <div><div class="k">Tuần này</div><div class="b">${doneW}/${wt.length} việc</div></div>
     </div>
-    <div class="glass stat rise" style="--i:1"><div class="v"><span class="flame">🔥</span> <span data-count="${st}">${st}</span></div><div class="k">ngày liên tiếp</div></div>
+    <div class="glass stat rise" style="--i:1;cursor:pointer" data-a="avatar"><div class="v"><span class="flame">🔥</span> <span data-count="${st}">${st}</span></div><div class="k">ngày liên tiếp</div></div>
     <div class="glass stat debt ${debt ? 'has' : 'zero'} rise" style="--i:2" data-a="tab" data-v="fund"><div class="v" style="font-size:17px" data-count="${debt}" data-fmt="money">${money(debt)}</div><div class="k">${debt ? 'đang nợ quỹ' : 'không nợ 🎉'}</div></div>
   </div>
   <div class="weeknav">
@@ -732,7 +825,7 @@ function viewAdmin() {
   ${rows.map((r, i) => `<div class="glass li urow rise" style="--i:${i + 4}" data-a="viewUser" data-uid="${esc(r.u.uid)}">
     <div class="rank">${medal(i)}</div>${avaHTML(r.u)}
     <div class="tx"><div class="tt">${esc(r.u.displayName)} ${r.u.isAdmin ? '<span class="chip adm">ADMIN</span>' : ''}</div>
-      <div class="ts">@${esc(r.u.username)} · ${r.done}/${r.wt.length} xong · ${r.failedW} trượt</div><div class="mini"><i style="width:${r.pct}%"></i></div></div>
+      <div class="ts">${tierBadge(streak(r.u.tasks), true)} @${esc(r.u.username)} · ${r.done}/${r.wt.length} xong · ${r.failedW} trượt</div><div class="mini"><i style="width:${r.pct}%"></i></div></div>
     <div style="text-align:right"><div class="b">${r.pct}%</div><div class="sm" style="color:${r.debt ? '#fca5a5' : '#86efac'}">${r.debt ? 'nợ ' + money(r.debt) : 'sạch nợ'}</div></div></div>`).join('')}
   <div class="sec">⚙️ Cài đặt quỹ MoMo</div>
   <form id="setForm" class="glass card">
@@ -751,7 +844,7 @@ function userSheetHTML() {
   const cnt = s => wt.filter(t => status(t, now) === s).length;
   const debt = Math.max(0, fineOf(u.tasks) - paidOf(u.payments));
   return `<div class="detail-hero">${avaHTML(u, 'uava', 'width:56px;height:56px;font-size:20px')}
-    <div><h3>${esc(u.displayName)}</h3><div class="sm mut">@${esc(u.username)} · nợ quỹ: <b style="color:${debt ? '#fca5a5' : '#86efac'}">${money(debt)}</b></div></div></div>
+    <div><h3>${esc(u.displayName)}</h3><div style="margin:2px 0 4px">${tierBadge(streak(u.tasks), true)} <span class="sm mut">🔥 ${streak(u.tasks)} ngày · kỷ lục ${bestStreak(u.tasks)}</span></div><div class="sm mut">@${esc(u.username)} · nợ quỹ: <b style="color:${debt ? '#fca5a5' : '#86efac'}">${money(debt)}</b></div></div></div>
   <div class="weeknav"><button class="icon-btn" data-a="uweek" data-v="-1">‹</button><div class="wk glass"><b>${fmtD(days[0])} – ${fmtD(days[6])}</b><span class="sm mut">✅ ${cnt('done')} · ❌ ${cnt('failed')} · ⏳ ${cnt('upcoming') + cnt('active') + cnt('grace')}</span></div><button class="icon-btn" data-a="uweek" data-v="1">›</button></div>
   <div class="legend"><span><i style="background:#22c55e"></i>Hoàn thành</span><span><i style="background:#ef4444"></i>Không hoàn thành</span><span><i style="background:#f59e0b"></i>Đang chờ tick</span><span><i style="background:#7b5cff"></i>Sắp tới</span></div>
   ${hours.length ? `<div class="gridwrap"><table class="gt"><tr><th class="h"></th>${days.map((d, i) => `<th>${DOW[i]}<br><span class="mut">${d.getDate()}</span></th>`).join('')}</tr>
@@ -821,7 +914,8 @@ function updateDeadlineBox() {
 document.addEventListener('input', e => {
   if (e.target.closest('#avaForm') && e.target.name === 'url') {
     const url = cleanImgUrl(e.target.value);
-    $('#avaPrev').innerHTML = avaHTML({ ...S.me, avatar:/^(https?:\/\/|data:image\/)/.test(url) ? url : '' }, 'ava bigava');
+    const T = tierOf(streak(S.tasks));
+    $('#avaPrev').innerHTML = avaHTML({ ...S.me, avatar:/^(https?:\/\/|data:image\/)/.test(url) ? url : '' }, 'ava bigava', `background:conic-gradient(from var(--a),${T.c.join(',')},${T.c[0]})`);
   }
 });
 document.addEventListener('change', e => {
@@ -858,8 +952,30 @@ function openDetail(t) {
 const A = {
   noop() {},
   avatar() {
-    openSheet(`<h3>🖼️ Ảnh đại diện</h3>
-    <div id="avaPrev">${avaHTML(S.me, 'ava bigava')}</div>
+    const em = DB.currentEmail ? DB.currentEmail() : '', linked = em && !em.endsWith('@' + C.EMAIL_DOMAIN);
+    let pending = ''; try { pending = localStorage.getItem('tgb_pending_' + S.me.uid) || ''; } catch {}
+    const st = streak(S.tasks), best = bestStreak(S.tasks), T = tierOf(st), N = nextTier(st);
+    const doneAll = S.tasks.filter(t => t.done).length;
+    const prog = N ? Math.round((st - T.d) / (N.d - T.d) * 100) : 100;
+    openSheet(`<div class="pcard" style="--g:${tierGrad(T)}">
+      <div id="avaPrev">${avaHTML(S.me, 'ava bigava', `background:conic-gradient(from var(--a),${T.c.join(',')},${T.c[0]})`)}</div>
+      <h3 style="margin-bottom:2px">${esc(S.me.displayName)}</h3>
+      <div class="sm mut" style="margin-bottom:8px">@${esc(S.me.username)} ${S.me.isAdmin ? '<span class="chip adm">ADMIN</span>' : ''}</div>
+      ${tierBadge(st)}
+      <div class="pstats"><div><b>🔥 ${st}</b><span>chuỗi hiện tại</span></div><div><b>🏅 ${best}</b><span>kỷ lục</span></div><div><b>✅ ${doneAll}</b><span>việc đã xong</span></div></div>
+      ${N ? `<div class="bar" style="max-width:none;height:9px"><i style="width:${prog}%;background:${tierGrad(N)}"></i></div>
+      <div class="sm" style="margin-top:8px">Còn <b>${N.d - st} ngày</b> nữa lên ${N.e} <b>${N.n}</b></div>` : `<div class="sm b">Đã đạt cấp cao nhất! 🏆</div>`}
+    </div>
+    <div class="sm mut" style="text-align:center;margin:-2px 0 4px">Chuỗi = số ngày liên tiếp hoàn thành <b>tất cả</b> việc trong ngày</div>
+    <div class="sec">🏆 Các cấp chuỗi</div>
+    <div class="tiers">${TIERS.map(t => `<div class="tierc ${st >= t.d ? '' : 'locked'} ${t === T ? 'cur' : ''} ${t.rainbow ? 'rainbow' : ''}" style="background:${tierGrad(t)}"><span class="te">${st >= t.d ? t.e : '🔒'}</span>${t.n}<small>${t.d ? t.d + ' ngày' : 'Khởi đầu'}</small></div>`).join('')}</div>
+    <div class="sec">✏️ Tên hiển thị</div>
+    <form id="nameForm" class="row2" style="grid-template-columns:1fr auto;align-items:end">
+      <label style="margin:0">Tên mọi người nhìn thấy<input name="name" required minlength="2" maxlength="40" value="${esc(S.me.displayName)}"></label>
+      <button class="btn" type="submit" style="height:50px">Lưu</button>
+    </form>
+    <div class="sm mut" style="margin:8px 2px 0">Tên đăng nhập <b>@${esc(S.me.username)}</b> giữ nguyên${S.me.isAdmin ? ', quyền admin không thay đổi' : ''}.</div>
+    <div class="sec">🖼️ Ảnh đại diện</div>
     <form id="avaForm">
       <label>Link ảnh<input name="url" inputmode="url" autocapitalize="none" autocorrect="off" placeholder="Dán link ảnh vào đây" value="${esc(S.me.avatar || '')}"></label>
       <div class="hint">📌 <b>Cách lấy link:</b> vào Google Hình ảnh, bấm vào ảnh muốn dùng để mở to.<br>• Điện thoại: <b>giữ ngón tay</b> trên ảnh → <b>Sao chép địa chỉ hình ảnh</b> (Copy image address).<br>• Máy tính: <b>chuột phải</b> vào ảnh → <b>Sao chép địa chỉ hình ảnh</b>.</div>
@@ -867,7 +983,23 @@ const A = {
         ${S.me.avatar ? `<button type="button" class="btn no" data-a="avaRemove">Xoá ảnh</button>` : ''}
         <button class="btn" type="submit">Lưu ảnh ✨</button>
       </div>
-    </form>`);
+    </form>
+    <div class="sec" style="margin-top:22px">📧 Email khôi phục mật khẩu</div>
+    ${DB.mode === 'demo' ? `<div class="hint">Chế độ thử không gửi được email. Khi cấu hình Firebase, mục này sẽ dùng được.</div>` : `
+    <div class="hint">${linked ? `✅ Đã gắn: <b>${esc(em)}</b>. Quên mật khẩu sẽ nhận link đặt lại qua email này. Anh/chị cũng có thể đăng nhập bằng email này.` : `⚠️ <b>Chưa gắn email.</b> Nếu quên mật khẩu sẽ không tự lấy lại được.`}
+    ${pending && pending !== em ? `<br>⏳ Đang chờ xác nhận: <b>${esc(pending)}</b> – mở hộp thư, bấm link trong thư (xem cả thư rác), rồi đăng nhập lại.` : ''}</div>
+    <form id="recForm">
+      <label>${linked ? 'Đổi sang email khác' : 'Email của anh/chị'}<input name="email" type="email" required autocapitalize="none" placeholder="vd: ten@gmail.com"></label>
+      <button class="btn full ghost" type="submit">Gửi thư xác nhận</button>
+    </form>`}`);
+  },
+  forgot() {
+    if (DB.mode === 'demo') return toast('Chế độ thử không gửi được email. Admin thử: admin / admin123', 'warn');
+    const u = $('#authForm input[name=u]')?.value || '';
+    openSheet(`<h3>🔑 Quên mật khẩu</h3><div class="sm mut" style="margin-bottom:16px">Link đặt lại mật khẩu sẽ gửi tới email khôi phục đã gắn với tài khoản.</div>
+    <form id="forgotForm"><label>Tên đăng nhập hoặc email<input name="id" required autocapitalize="none" autocorrect="off" value="${esc(u)}"></label>
+    <button class="btn full" type="submit">Gửi link đặt lại 📨</button></form>
+    <div class="hint" style="margin-top:14px">Chưa từng gắn email? Liên hệ admin để được hỗ trợ.</div>`);
   },
   async avaRemove() {
     await DB.updateProfile(S.me.uid, { avatar:'' }); S.me.avatar = '';
@@ -906,7 +1038,7 @@ const A = {
       if (dayT.every(z => z.done)) { setTimeout(celebrate, 300); toast('🎉 Hoàn thành tất cả việc trong ngày!'); }
       else toast(CHEERS[Math.floor(Math.random() * CHEERS.length)]);
     } else toast('Đã bỏ tick ↩️', 'warn');
-    render(); S.justDone = null;
+    render(); S.justDone = null; if (nd) checkTierUp();
   },
   async copyWeek() {
     const a = addDays(S.week, -7).getTime(), b = S.week.getTime(), now = Date.now();
@@ -952,7 +1084,8 @@ function makeTask(base, day, sm, dur, grace) {
 const FORMS = {
   async authForm(f, fd) {
     const u = String(fd.get('u') || '').trim().toLowerCase(), p = String(fd.get('p') || '');
-    if (!/^[a-z0-9_]{3,20}$/.test(u)) return toast('Tên đăng nhập 3–20 ký tự: chữ thường không dấu, số, gạch dưới', 'bad');
+    const isEmail = S.authMode !== 'reg' && u.includes('@');
+    if (!isEmail && !/^[a-z0-9_]{3,20}$/.test(u)) return toast('Tên đăng nhập 3–20 ký tự: chữ thường không dấu, số, gạch dưới', 'bad');
     S.justLogged = true;
     if (S.authMode === 'reg') await DB.register(u, p, String(fd.get('name') || '').trim() || u);
     else await DB.login(u, p);
@@ -980,6 +1113,27 @@ const FORMS = {
       toast(`🎯 Đã thêm ${n} nhiệm vụ`); burst(innerWidth / 2, innerHeight * .6, 45);
     }
     closeSheet(); render();
+  },
+  async forgotForm(f, fd) {
+    const id = String(fd.get('id') || '').trim().toLowerCase(); if (!id) return;
+    const em = await DB.sendReset(id);
+    const masked = em.replace(/^(.{2}).*(@.*)$/, '$1***$2');
+    closeSheet(); toast(`📨 Đã gửi link tới ${masked}. Mở thư (xem cả thư rác) để đặt mật khẩu mới.`);
+  },
+  async recForm(f, fd) {
+    const em = String(fd.get('email') || '').trim().toLowerCase();
+    if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(em)) return toast('Email không hợp lệ', 'bad');
+    if (em.endsWith('@' + C.EMAIL_DOMAIN)) return toast('Hãy dùng email thật', 'bad');
+    await DB.setRecoveryEmail(S.me.username, em);
+    try { localStorage.setItem('tgb_pending_' + S.me.uid, em); } catch {}
+    closeSheet(); toast(`📧 Đã gửi thư xác nhận tới ${em}. Bấm link trong thư rồi đăng nhập lại.`);
+  },
+  async nameForm(f, fd) {
+    const name = String(fd.get('name') || '').trim().replace(/\s+/g, ' ');
+    if (name.length < 2) return toast('Tên tối thiểu 2 ký tự', 'bad');
+    if (name === S.me.displayName) return closeSheet();
+    await DB.updateProfile(S.me.uid, { displayName:name }); S.me.displayName = name;
+    closeSheet(); toast(`Đã đổi tên thành "${name}" ✏️`); render();
   },
   async avaForm(f, fd) {
     const url = cleanImgUrl(fd.get('url'));
@@ -1070,7 +1224,7 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && S.
     try { [S.tasks, S.payments, S.settings] = await Promise.all([DB.listTasks(u.uid), DB.listPayments(u.uid), DB.getSettings()]); }
     catch (e) { console.error(e); toast(errMsg(e), 'bad'); }
     S.week = mondayOf(new Date()); S.day = dowIdx(new Date()); S.animate = true;
-    checkFailures(true); render();
+    checkFailures(true); render(); checkTierUp();
     if (S.justLogged) { S.justLogged = false; setTimeout(celebrate, 200); toast(`Chào ${u.displayName}! 👋`); }
     setTimeout(() => $('.time.now')?.scrollIntoView({ behavior:'smooth', block:'center' }), 700);
   });
