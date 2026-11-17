@@ -111,6 +111,14 @@ h1.big{font-size:34px;font-weight:900;margin:8px 0 4px}
 .tierc small{display:block;font-weight:600;opacity:.9;font-size:10.5px}
 .tierc.locked{background:rgba(255,255,255,.05)!important;color:var(--mut);text-shadow:none}
 .tierc.cur{outline:2px solid #fff;transform:scale(1.05);box-shadow:0 0 22px rgba(255,255,255,.35)}
+.tools{display:flex;gap:8px;overflow-x:auto;margin:-2px 0 12px;scrollbar-width:none}
+.tools::-webkit-scrollbar{display:none}
+.tools .btn{flex:none;white-space:nowrap}
+.imp-day{font-weight:800;font-size:13px;margin:12px 0 6px;color:#c4b5fd}
+.imp-row{display:flex;gap:10px;align-items:center;padding:8px 10px;border-radius:12px;background:var(--card);margin-bottom:6px;font-size:14px}
+.imp-row .t{font-weight:700;flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.imp-row .h{font-size:12px;color:var(--mut);white-space:nowrap}
+.sharebtns{display:grid;gap:10px}
 .hint{font-size:12.5px;color:var(--mut);line-height:1.6;background:var(--card);border-radius:12px;padding:10px 12px;margin:-4px 0 16px}
 .name{font-weight:800;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lv{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:11.5px;font-weight:800}
@@ -314,6 +322,7 @@ const C = Object.assign({
 C.ADMIN_USERNAME = C.ADMIN_USERNAME.toLowerCase();
 const HOUR = 3600e3, MIN = 60e3, DAY = 864e5;
 const useFirebase = !!(C.firebase && C.firebase.apiKey);
+const allowDemo = /[?&]demo\b/.test(location.search); // chỉ để kiểm thử nội bộ
 
 const $ = s => document.querySelector(s);
 const $$ = s => [...document.querySelectorAll(s)];
@@ -524,6 +533,7 @@ function makeLocal() {
     },
     async logout() { localStorage.removeItem(SKEY); cb(null); },
     async listUsers() { return Object.keys(db.users).map(me); },
+    watch() { return () => {}; },
     async listTasks(uid) { return Object.values(db.tasks[uid] || {}).map(t => ({...t})); },
     async addTask(uid, t) {
       const id = 't' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -604,6 +614,16 @@ async function makeFirebase() {
       await updateDoc(doc(db, 'usernames', username), { pendingEmail:em });
     },
     currentEmail() { return auth.currentUser?.email || ''; },
+    // ĐỒNG BỘ TỨC THÌ giữa các thiết bị cùng tài khoản
+    watch(uid, on) {
+      const { onSnapshot } = FS, offs = [];
+      const err = e => console.warn('watch', e);
+      offs.push(onSnapshot(collection(db, 'users', uid, 'tasks'), q => on.tasks(q.docs.map(normT)), err));
+      offs.push(onSnapshot(collection(db, 'users', uid, 'payments'), q => on.payments(q.docs.map(d => ({ ...d.data(), id:d.id })).sort((a, b) => b.createdAt - a.createdAt)), err));
+      offs.push(onSnapshot(doc(db, 'settings', 'fund'), d => on.settings(d.exists() ? d.data() : {}), err));
+      offs.push(onSnapshot(doc(db, 'users', uid), d => d.exists() && on.profile(d.data()), err));
+      return () => offs.forEach(f => f());
+    },
     async register(u, p, name) { pendingName = name; await AU.createUserWithEmailAndPassword(auth, email(u), p); },
     async logout() { await AU.signOut(auth); },
     async listUsers() { const s = await getDocs(collection(db, 'users')); return s.docs.map(d => mkUser(d.id, d.data())); },
@@ -631,11 +651,14 @@ let DB;
 const S = { me:null, tasks:[], payments:[], settings:{}, week:mondayOf(new Date()), day:dowIdx(new Date()),
   tab:'cal', authMode:'login', animate:true, shake:new Set(), justDone:null, admin:null, uv:null, quote:QUOTES[Math.floor(Math.random()*QUOTES.length)] };
 const loaderHTML = `<div class="loader"><div class="spin"></div></div>`;
+const setupHTML = () => `<div class="wrap auth"><div class="logo">🛠️</div><h1 class="grad big">${esc(C.APP_NAME)}</h1>
+  <div class="glass card"><h3>Ứng dụng chưa được kết nối máy chủ</h3>
+  <div class="sm" style="line-height:1.7;margin-top:8px">Quản trị viên cần dán cấu hình Firebase vào tệp <b>config.js</b> trên GitHub (6 dòng <code>apiKey</code>, <code>authDomain</code>, <code>projectId</code>, <code>storageBucket</code>, <code>messagingSenderId</code>, <code>appId</code>).<br>Sau khi lưu, đợi 1–2 phút rồi tải lại trang.</div></div></div>`;
 
 function render() {
   if (!S.me) return renderAuth();
   const body = S.tab === 'fund' ? viewFund() : S.tab === 'admin' && S.me.isAdmin ? viewAdmin() : viewCal();
-  $('#app').innerHTML = `<div class="wrap ${S.animate ? 'anim' : ''}">${DB.mode === 'demo' ? `<div class="demo-banner">⚙️ Chế độ thử — dữ liệu chỉ lưu trên máy này. Cấu hình Firebase để dùng chung.</div>` : ''}${header()}${body}</div>${nav()}`;
+  $('#app').innerHTML = `<div class="wrap ${S.animate ? 'anim' : ''}">${DB.mode === 'demo' ? `<div class="demo-banner">⚙️ Bản kiểm thử nội bộ — dữ liệu chỉ lưu trên máy này.</div>` : ''}${header()}${body}</div>${nav()}`;
   $$('img.qrimg').forEach(i => i.onerror = () => { i.outerHTML = '<div class="noqr">Admin chưa tải mã QR MoMo lên</div>'; });
   if (S.animate) countUp();
   S.animate = false;
@@ -656,6 +679,7 @@ function renderAuth() {
     <div class="logo">🗓️</div>
     <h1 class="grad big">${esc(C.APP_NAME)}</h1>
     <div class="mut">Lên lịch · Tick xanh · Giữ ví khỏi mỏng 💸</div>
+    ${S.incoming ? `<div class="note" style="margin-top:14px">📥 Có thời gian biểu của <b>${esc(S.incoming.name || '')}</b> được chia sẻ. Đăng nhập để xem và áp dụng.</div>` : ''}
     <div class="glass card">
       <div class="seg"><span class="seg-ind" style="transform:translateX(${reg ? 'calc(100% + 0px)' : '0'})"></span>
         <button data-a="authMode" data-v="login" class="${!reg ? 'on' : ''}">Đăng nhập</button>
@@ -667,7 +691,7 @@ function renderAuth() {
         <button class="btn full" type="submit">${reg ? 'Tạo tài khoản ✨' : 'Vào ứng dụng 🚀'}</button>
       </form>
       ${reg ? '' : `<button class="linkbtn" data-a="forgot">Quên mật khẩu?</button>`}
-      ${DB.mode === 'demo' ? `<div class="note">⚙️ Đang ở <b>chế độ thử</b>: dữ liệu chỉ lưu trên máy này.<br>Tài khoản admin thử: <b>${esc(C.ADMIN_USERNAME)}</b> / <b>admin123</b></div>` : ''}
+      ${DB.mode === 'demo' ? `<div class="note">⚙️ Bản kiểm thử nội bộ – dữ liệu chỉ lưu trên máy này.</div>` : ''}
     </div></div>`;
 }
 
@@ -735,7 +759,12 @@ function viewCal() {
       <div class="dots">${ts.slice(0, 5).map(t => `<i class="${status(t, now)}"></i>`).join('')}</div></button>`;
   }).join('')}</div>
   <div class="dayhead"><div><h2>${DOWF[S.day]}, ${fmtD(day)}</h2><div class="sm mut">${dayTasks.length ? `${dayDone}/${dayTasks.length} việc hoàn thành` : 'Chưa có việc nào – bấm ô trống để thêm'}</div></div>
-    ${canCopy ? `<button class="btn ghost sm" data-a="copyWeek">📋 Chép tuần trước</button>` : ''}</div>
+</div>
+  <div class="tools">
+    ${canCopy ? `<button class="btn ghost sm" data-a="copyWeek">📋 Chép tuần trước</button>` : ''}
+    <button class="btn ghost sm" data-a="shareWeek">📤 Chia sẻ tuần</button>
+    <button class="btn ghost sm" data-a="importOpen">📥 Áp dụng lịch</button>
+  </div>
   <div class="dayprog"><i style="width:${dayTasks.length ? dayDone / dayTasks.length * 100 : 0}%"></i></div>
   ${slots}`;
 }
@@ -863,8 +892,10 @@ function openSheet(html) {
 function closeSheet() {
   const o = $('.overlay'); if (!o) return;
   o.classList.add('out');
-  setTimeout(() => { $('#modal-root').innerHTML = ''; document.body.classList.remove('lock'); }, 240);
+  setTimeout(() => { $('#modal-root').innerHTML = ''; document.body.classList.remove('lock'); if (S.dirty) { S.dirty = false; render(); } }, 240);
 }
+// vẽ lại khi có dữ liệu mới từ thiết bị khác (đợi nếu đang mở bảng nhập)
+function softRender() { if (!S.me) return; if ($('.overlay')) { S.dirty = true; return; } render(); }
 
 const GRACE_OPTS = [[30,'30 phút'],[60,'1 giờ'],[120,'2 giờ'],[180,'3 giờ'],[240,'4 giờ'],[360,'6 giờ'],[720,'12 giờ'],['eod','Đến 23:59']];
 function graceMin(v, endMin) { return v === 'eod' ? Math.max(30, 23 * 60 + 59 - endMin) : +v; }
@@ -951,6 +982,56 @@ function openDetail(t) {
    ===================================================================== */
 const A = {
   noop() {},
+  shareWeek() {
+    const pack = packWeek(S.week), n = pack.items.length;
+    if (!n) return toast('Tuần này chưa có việc nào để chia sẻ', 'warn');
+    const done = pack.items.filter(x => x.ok).length;
+    openSheet(`<h3>📤 Chia sẻ thời gian biểu</h3>
+    <div class="sm mut" style="margin-bottom:6px">Tuần ${fmtD(S.week)} – ${fmtD(addDays(S.week, 6))} · ${n} việc · đã xong ${done}</div>
+    ${itemsListHTML(pack.items)}
+    <div class="sec">Gửi cho người khác</div>
+    <div class="sharebtns">
+      ${navigator.share ? `<button class="btn" data-a="shareNative">📲 Gửi qua Zalo, Messenger…</button>` : ''}
+      <button class="btn ${navigator.share ? 'ghost' : ''}" data-a="shareCopy">🔗 Sao chép link chia sẻ</button>
+      <button class="btn ghost" data-a="shareJson">📄 Tải file thời gian biểu (.json)</button>
+      <button class="btn ghost" data-a="shareCsv">📊 Tải bảng Excel (.csv)</button>
+    </div>
+    <div class="hint" style="margin-top:12px">Người nhận mở link (hoặc bấm <b>📥 Áp dụng lịch</b> rồi chọn file) để xem và chép lịch này vào tuần của họ.</div>`);
+  },
+  async shareNative() {
+    const pack = packWeek(S.week), url = shareLink(pack);
+    try { await navigator.share({ title:'Thời gian biểu của ' + S.me.displayName, text:`📅 Thời gian biểu tuần ${fmtD(S.week)} của ${S.me.displayName} (${pack.items.length} việc). Mở link để xem và áp dụng:`, url }); }
+    catch (e) { if (e.name !== 'AbortError') A.shareCopy(); }
+  },
+  shareCopy() {
+    const url = shareLink(packWeek(S.week));
+    (navigator.clipboard ? navigator.clipboard.writeText(url) : Promise.reject()).then(() => toast('🔗 Đã chép link, dán vào Zalo/Messenger để gửi'), () => prompt('Chép link này:', url));
+  },
+  shareJson() {
+    const pack = packWeek(S.week);
+    download(`thoigianbieu-${S.me.username}-${pack.week}.json`, JSON.stringify(pack, null, 1), 'application/json');
+    toast('📄 Đã tải file thời gian biểu');
+  },
+  shareCsv() {
+    const pack = packWeek(S.week), ws = S.week, q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const rows = [['Thứ','Ngày','Bắt đầu','Kết thúc','Thời lượng','Công việc','Ghi chú','Trạng thái']];
+    weekTasksOf(S.tasks, ws).sort((a, b) => a.start - b.start).forEach(t => {
+      const d = parseDK(t.date), st = status(t);
+      rows.push([DOWF[dowIdx(d)], fmtD(d) + '/' + d.getFullYear(), fmtHM(smOf(t)), fmtHM(smOf(t) + durOf(t)), durLabel(durOf(t)), t.title, t.note || '',
+        { done:'Hoàn thành', failed:'Không hoàn thành', grace:'Chờ tick', active:'Đang diễn ra', upcoming:'Sắp tới' }[st]]);
+    });
+    download(`thoigianbieu-${S.me.username}-${pack.week}.csv`, '\ufeff' + rows.map(r => r.map(q).join(',')).join('\r\n'), 'text/csv;charset=utf-8');
+    toast('📊 Đã tải bảng, mở bằng Excel');
+  },
+  importOpen() {
+    openSheet(`<h3>📥 Áp dụng thời gian biểu</h3>
+    <div class="sm mut" style="margin-bottom:14px">Dán link chia sẻ hoặc chọn file .json người khác gửi.</div>
+    <form id="importForm">
+      <label>Link chia sẻ<input name="link" autocapitalize="none" autocorrect="off" placeholder="https://...#share=..."></label>
+      <label>Hoặc chọn file<input name="file" type="file" accept=".json,application/json"></label>
+      <button class="btn full" type="submit">Xem trước 👀</button>
+    </form>`);
+  },
   avatar() {
     const em = DB.currentEmail ? DB.currentEmail() : '', linked = em && !em.endsWith('@' + C.EMAIL_DOMAIN);
     let pending = ''; try { pending = localStorage.getItem('tgb_pending_' + S.me.uid) || ''; } catch {}
@@ -1050,7 +1131,7 @@ const A = {
       const d = addDays(parseDK(s.date), 7), date = dk(d), sm = smOf(s), dur = durOf(s);
       if (now >= minMs(d, sm + dur) || overlaps(S.tasks, date, sm, dur)) continue;
       const t = makeTask({ title:s.title, emoji:s.emoji, color:s.color, note:s.note || '' }, d, sm, dur, Math.round((s.deadline - endOf(s)) / MIN));
-      t.id = await DB.addTask(S.me.uid, t); S.tasks.push(t); n++;
+      t.id = await DB.addTask(S.me.uid, t); addLocal(t); n++;
     }
     toast(n ? `📋 Đã chép ${n} nhiệm vụ` : 'Không có khung giờ nào chép được', n ? 'ok' : 'warn');
     if (n) burst(innerWidth / 2, innerHeight / 2, 60);
@@ -1077,10 +1158,68 @@ async function setPay(el, status) {
   render();
 }
 
+const addLocal = t => { if (!S.tasks.some(y => y.id === t.id)) S.tasks.push(t); };
 function makeTask(base, day, sm, dur, grace) {
   const start = minMs(day, sm), end = minMs(day, sm + dur);
   return { ...base, date:dk(day), sm, dur, hour:Math.floor(sm / 60), start, end, deadline:end + Math.max(SLOT, grace) * MIN, done:false, doneAt:null };
 }
+/* ===================== CHIA SẺ / ÁP DỤNG THỜI GIAN BIỂU ===================== */
+const b64e = str => btoa(unescape(encodeURIComponent(str))).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const b64d = str => decodeURIComponent(escape(atob(str.replace(/-/g, '+').replace(/_/g, '/'))));
+function packWeek(ws) {
+  const items = weekTasksOf(S.tasks, ws).sort((a, b) => a.start - b.start).map(t => ({
+    d:dowIdx(parseDK(t.date)), sm:smOf(t), dur:durOf(t), t:t.title, e:t.emoji, c:t.color, n:t.note || '',
+    g:Math.round((t.deadline - endOf(t)) / MIN), ok:t.done ? 1 : 0 }));
+  return { app:'tgb', v:1, name:S.me.displayName, week:dk(ws), items };
+}
+function unpack(raw) {
+  raw = String(raw || '').trim();
+  const m = raw.match(/#share=([A-Za-z0-9_-]+)/); if (m) raw = b64d(m[1]);
+  else if (/^[A-Za-z0-9_-]{20,}$/.test(raw)) raw = b64d(raw);
+  const o = JSON.parse(raw);
+  if (o.app !== 'tgb' || !Array.isArray(o.items)) throw new Error('Không đúng định dạng thời gian biểu');
+  o.items = o.items.filter(x => Number.isInteger(x.d) && x.d >= 0 && x.d < 7 && x.sm >= 0 && x.dur > 0 && x.sm + x.dur <= 1440 && x.t).map(x => ({ ...x, t:String(x.t).slice(0, 60), n:String(x.n || '').slice(0, 200) }));
+  return o;
+}
+function download(name, text, type) {
+  const blob = new Blob([text], { type }), a = document.createElement('a');
+  a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1000);
+}
+function shareLink(pack) { return location.origin + location.pathname + '#share=' + b64e(JSON.stringify(pack)); }
+function itemsListHTML(items) {
+  let html = '';
+  for (let d = 0; d < 7; d++) {
+    const xs = items.filter(x => x.d === d); if (!xs.length) continue;
+    html += `<div class="imp-day">${DOWF[d]}</div>` + xs.map(x => `<div class="imp-row"><span>${esc(x.e || '📌')}</span><span class="t">${esc(x.t)}</span><span class="h">${fmtHM(x.sm)}–${fmtHM(x.sm + x.dur)}</span></div>`).join('');
+  }
+  return html || '<div class="empty-msg">Không có việc nào.</div>';
+}
+function openImport(pack) {
+  S.incoming = null; S.importPack = pack;
+  const ws = mondayOf(new Date()), ws2 = addDays(ws, 7), from = parseDK(pack.week);
+  openSheet(`<h3>📥 Áp dụng thời gian biểu</h3>
+  <div class="sm mut" style="margin-bottom:6px">Của <b style="color:#fff">${esc(pack.name || 'không rõ')}</b> · tuần ${fmtD(from)} – ${fmtD(addDays(from, 6))} · ${pack.items.length} việc</div>
+  ${itemsListHTML(pack.items)}
+  <div class="sec">Áp dụng vào</div>
+  <form id="applyForm">
+    <select name="target">
+      <option value="${dk(ws)}">Tuần này (${fmtD(ws)} – ${fmtD(addDays(ws, 6))})</option>
+      <option value="${dk(ws2)}">Tuần sau (${fmtD(ws2)} – ${fmtD(addDays(ws2, 6))})</option>
+      ${dk(S.week) !== dk(ws) && dk(S.week) !== dk(ws2) && S.week > ws ? `<option value="${dk(S.week)}" selected>Tuần đang xem (${fmtD(S.week)} – ${fmtD(addDays(S.week, 6))})</option>` : ''}
+    </select>
+    <div class="hint" style="margin-top:12px">Bỏ qua những giờ đã qua hoặc đã có việc của bạn. Trạng thái hoàn thành không được chép.</div>
+    <button class="btn full" type="submit">Áp dụng vào lịch của tôi ✨</button>
+  </form>`);
+}
+function readIncomingHash() {
+  const m = location.hash.match(/#share=([A-Za-z0-9_-]+)/); if (!m) return;
+  try { S.incoming = unpack(location.hash); } catch (e) { toast('Link chia sẻ bị lỗi', 'bad'); }
+  history.replaceState(null, '', location.pathname + location.search);
+}
+readIncomingHash();
+addEventListener('hashchange', () => { readIncomingHash(); if (S.incoming && S.me) openImport(S.incoming); });
+
 const FORMS = {
   async authForm(f, fd) {
     const u = String(fd.get('u') || '').trim().toLowerCase(), p = String(fd.get('p') || '');
@@ -1108,7 +1247,7 @@ const FORMS = {
         const day = parseDK(d);
         if (overlaps(S.tasks, d, sm, dur) || Date.now() >= minMs(day, sm + dur)) continue;
         const t = makeTask(base, day, sm, dur, graceMin(graceV, sm + dur));
-        t.id = await DB.addTask(S.me.uid, t); S.tasks.push(t); n++;
+        t.id = await DB.addTask(S.me.uid, t); addLocal(t); n++;
       }
       toast(`🎯 Đã thêm ${n} nhiệm vụ`); burst(innerWidth / 2, innerHeight * .6, 45);
     }
@@ -1127,6 +1266,30 @@ const FORMS = {
     await DB.setRecoveryEmail(S.me.username, em);
     try { localStorage.setItem('tgb_pending_' + S.me.uid, em); } catch {}
     closeSheet(); toast(`📧 Đã gửi thư xác nhận tới ${em}. Bấm link trong thư rồi đăng nhập lại.`);
+  },
+  async importForm(f, fd) {
+    const file = fd.get('file'), link = String(fd.get('link') || '').trim();
+    let raw = link;
+    if (file && file.size) { if (file.size > 300000) return toast('File quá lớn', 'bad'); raw = await file.text(); }
+    if (!raw) return toast('Dán link hoặc chọn file', 'warn');
+    let pack; try { pack = unpack(raw); } catch (e) { return toast('Link/file không hợp lệ', 'bad'); }
+    openImport(pack);
+  },
+  async applyForm(f, fd) {
+    const pack = S.importPack; if (!pack) return;
+    const ws = parseDK(fd.get('target')), now = Date.now();
+    let n = 0, skip = 0;
+    for (const x of pack.items) {
+      const day = addDays(ws, x.d), date = dk(day);
+      if (now >= minMs(day, x.sm + x.dur) || overlaps(S.tasks, date, x.sm, x.dur)) { skip++; continue; }
+      const g = Math.min(24 * 60, Math.max(SLOT, +x.g || C.GRACE_MINUTES));
+      const t = makeTask({ title:x.t, emoji:x.e || '📌', color:/^#[0-9a-f]{6}$/i.test(x.c) ? x.c : COLORS[1], note:x.n || '' }, day, x.sm, x.dur, g);
+      t.id = await DB.addTask(S.me.uid, t); addLocal(t);; n++;
+    }
+    S.importPack = null; closeSheet();
+    S.week = ws; S.animate = true; render();
+    toast(n ? `✨ Đã thêm ${n} việc${skip ? `, bỏ qua ${skip} (đã qua giờ/trùng)` : ''}` : 'Không thêm được việc nào (giờ đã qua hoặc trùng)', n ? 'ok' : 'warn');
+    if (n) celebrate();
   },
   async nameForm(f, fd) {
     const name = String(fd.get('name') || '').trim().replace(/\s+/g, ' ');
@@ -1151,7 +1314,7 @@ const FORMS = {
     const amount = Math.round(+fd.get('amount'));
     if (!(amount > 0)) return toast('Số tiền không hợp lệ', 'bad');
     const p = { amount, status:'pending', createdAt:Date.now(), username:S.me.username, displayName:S.me.displayName };
-    p.id = await DB.addPayment(S.me.uid, p); S.payments.unshift(p);
+    p.id = await DB.addPayment(S.me.uid, p); if (!S.payments.some(y => y.id === p.id)) S.payments.unshift(p);
     closeSheet(); toast('Đã gửi, chờ admin xác nhận ⏳'); burst(innerWidth / 2, innerHeight / 2, 40, ['#facc15','#fde047','#fff']); render();
   },
   async setForm(f, fd) {
@@ -1215,16 +1378,27 @@ document.addEventListener('visibilitychange', () => { if (!document.hidden && S.
    ===================================================================== */
 (async () => {
   $('#app').innerHTML = loaderHTML;
+  if (!useFirebase && !allowDemo) { $('#app').innerHTML = setupHTML(); return; }
   try { DB = useFirebase ? await makeFirebase() : makeLocal(); await DB.init?.(); }
   catch (e) { console.error(e); $('#app').innerHTML = `<div class="wrap"><div class="glass card" style="margin-top:30vh">⚠️ Không kết nối được Firebase.<br><span class="sm mut">${esc(e.message)}<br>Kiểm tra lại file config.js.</span></div></div>`; return; }
   DB.onAuth(async u => {
     S.me = u; S.admin = null;
+    if (S.unwatch) { S.unwatch(); S.unwatch = null; }
     if (!u) { S.tasks = []; S.payments = []; S.tab = 'cal'; S.animate = true; closeSheet(); return render(); }
     $('#app').innerHTML = loaderHTML;
     try { [S.tasks, S.payments, S.settings] = await Promise.all([DB.listTasks(u.uid), DB.listPayments(u.uid), DB.getSettings()]); }
     catch (e) { console.error(e); toast(errMsg(e), 'bad'); }
     S.week = mondayOf(new Date()); S.day = dowIdx(new Date()); S.animate = true;
     checkFailures(true); render(); checkTierUp();
+    let first = true;
+    S.unwatch = DB.watch(u.uid, {
+      tasks: list => { S.tasks = list; if (!first) { checkFailures(false); softRender(); } },
+      payments: list => { S.payments = list; if (!first) softRender(); },
+      settings: x => { S.settings = x; if (!first) softRender(); },
+      profile: d => { const ch = d.displayName !== S.me.displayName || (d.avatar || '') !== (S.me.avatar || ''); Object.assign(S.me, { displayName:d.displayName, avatar:d.avatar || '' }); if (ch && !first) softRender(); }
+    });
+    setTimeout(() => { first = false; }, 1500);
+    if (S.incoming) setTimeout(() => openImport(S.incoming), 800);
     if (S.justLogged) { S.justLogged = false; setTimeout(celebrate, 200); toast(`Chào ${u.displayName}! 👋`); }
     setTimeout(() => $('.time.now')?.scrollIntoView({ behavior:'smooth', block:'center' }), 700);
   });
