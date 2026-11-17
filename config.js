@@ -1,14 +1,13 @@
 // ===================== CẤU HÌNH ỨNG DỤNG =====================
-// Để trống phần firebase => app chạy CHẾ ĐỘ THỬ (dữ liệu chỉ lưu trên máy đang mở).
-// Dán cấu hình Firebase vào => app chạy THẬT, nhiều người dùng chung, admin xem được tất cả.
+// Đã kết nối Firebase dự án thoigianbieu-8bbfb. Dữ liệu dùng chung, đồng bộ mọi thiết bị.
 window.APP_CONFIG = {
   firebase: {
-    apiKey: "",
-    authDomain: "",
-    projectId: "",
-    storageBucket: "",
-    messagingSenderId: "",
-    appId: ""
+    apiKey: "AIzaSyB09C5hCb9O1OOqY7zX1MNw7ZMhyxoHnNQ",
+    authDomain: "thoigianbieu-8bbfb.firebaseapp.com",
+    projectId: "thoigianbieu-8bbfb",
+    storageBucket: "thoigianbieu-8bbfb.firebasestorage.app",
+    messagingSenderId: "148691409052",
+    appId: "1:148691409052:web:9c1f576071fa089c5df559"
   },
 
   APP_NAME: "Thời Gian Biểu",
