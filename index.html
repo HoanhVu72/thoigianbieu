@@ -86,6 +86,14 @@ h1.big{font-size:34px;font-weight:900;margin:8px 0 4px}
 .top{display:flex;align-items:center;gap:12px;margin-bottom:14px}
 .ava{width:50px;height:50px;border-radius:16px;display:grid;place-items:center;font-weight:900;font-size:18px;background:conic-gradient(from var(--a),var(--pri1),var(--pri2),var(--pri3),var(--pri1));animation:spin 6s linear infinite;box-shadow:0 8px 24px -8px var(--pri2);flex:none}
 .hi{flex:1;min-width:0}
+.ava,.uava{position:relative;overflow:hidden;cursor:pointer}
+.ava img,.uava img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.ava.has-img img{inset:3px;width:calc(100% - 6px);height:calc(100% - 6px);border-radius:13px}
+.ava-edit{position:absolute;right:-2px;bottom:-2px;width:18px;height:18px;border-radius:50%;background:#fff;color:#111;font-size:10px;display:grid;place-items:center;box-shadow:0 2px 6px #0008;z-index:2}
+.avawrap{position:relative;flex:none}
+.bigava{width:120px;height:120px;border-radius:36px;margin:6px auto 16px;font-size:40px}
+.bigava.has-img img{inset:4px;width:calc(100% - 8px);height:calc(100% - 8px);border-radius:32px}
+.hint{font-size:12.5px;color:var(--mut);line-height:1.6;background:var(--card);border-radius:12px;padding:10px 12px;margin:-4px 0 16px}
 .name{font-weight:800;font-size:17px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .lv{display:flex;align-items:center;gap:8px;margin-top:4px;font-size:11.5px;font-weight:800}
 .lv>span:first-child{background:linear-gradient(135deg,#facc15,#f97316);color:#1a1300;padding:1px 7px;border-radius:7px}
@@ -304,6 +312,12 @@ const fmtD = d => `${pad(d.getDate())}/${pad(d.getMonth()+1)}`;
 const fmtT = ms => { const d = new Date(ms); return `${pad(d.getHours())}:${pad(d.getMinutes())}`; };
 const fmtDT = ms => { const d = new Date(ms); return `${fmtT(ms)} ${fmtD(d)}`; };
 const initials = n => (n||'?').trim().split(/\s+/).slice(-2).map(w => w[0]).join('').toUpperCase();
+const avaHTML = (u, cls = 'uava', style = '') => `<div class="${cls}${u.avatar ? ' has-img' : ''}" style="${style}">${esc(initials(u.displayName))}${u.avatar ? `<img src="${esc(u.avatar)}" alt="" referrerpolicy="no-referrer" onerror="this.remove()">` : ''}</div>`;
+function cleanImgUrl(u) {
+  u = String(u || '').trim();
+  try { const x = new URL(u); const real = x.searchParams.get('imgurl') || x.searchParams.get('mediaurl'); if (real) return real; } catch {}
+  return u;
+}
 const DOW = ['T2','T3','T4','T5','T6','T7','CN'];
 const DOWF = ['Thứ Hai','Thứ Ba','Thứ Tư','Thứ Năm','Thứ Sáu','Thứ Bảy','Chủ Nhật'];
 const EMOJIS = ['📌','📚','💼','🏛️','📝','💻','📞','🤝','🏃','🧘','🍳','🍽️','🛒','🧹','🚗','😴'];
@@ -427,7 +441,7 @@ function makeLocal() {
     return 'p:' + s;
   };
   const uidOf = u => 'u_' + u;
-  const me = uid => { const u = db.users[uid]; return u ? { uid, username:u.username, displayName:u.displayName, createdAt:u.createdAt, isAdmin:u.username === C.ADMIN_USERNAME } : null; };
+  const me = uid => { const u = db.users[uid]; return u ? { uid, username:u.username, displayName:u.displayName, avatar:u.avatar || '', createdAt:u.createdAt, isAdmin:u.username === C.ADMIN_USERNAME } : null; };
   let cb = () => {};
   const fail = code => { const e = new Error(code); e.code = code; throw e; };
   return {
@@ -463,7 +477,8 @@ function makeLocal() {
     async addPayment(uid, p) { const id = 'p' + Date.now().toString(36); (db.payments[uid] ??= {})[id] = { ...p, id }; save(); return id; },
     async updatePayment(uid, id, p) { Object.assign(db.payments[uid][id], p); save(); },
     async getSettings() { return { ...(db.settings || {}) }; },
-    async saveSettings(s) { db.settings = { ...db.settings, ...s }; save(); }
+    async saveSettings(s) { db.settings = { ...db.settings, ...s }; save(); },
+    async updateProfile(uid, p) { Object.assign(db.users[uid], p); save(); }
   };
 }
 
@@ -512,7 +527,8 @@ async function makeFirebase() {
     async addPayment(uid, p) { const r = await addDoc(collection(db, 'users', uid, 'payments'), p); return r.id; },
     async updatePayment(uid, id, p) { await updateDoc(doc(db, 'users', uid, 'payments', id), p); },
     async getSettings() { const s = await getDoc(doc(db, 'settings', 'fund')); return s.exists() ? s.data() : {}; },
-    async saveSettings(x) { await setDoc(doc(db, 'settings', 'fund'), x, { merge:true }); }
+    async saveSettings(x) { await setDoc(doc(db, 'settings', 'fund'), x, { merge:true }); },
+    async updateProfile(uid, p) { await updateDoc(doc(db, 'users', uid), p); }
   };
 }
 
@@ -565,7 +581,7 @@ function renderAuth() {
 function header() {
   const L = levelOf(S.tasks);
   return `<header class="top">
-    <div class="ava">${esc(initials(S.me.displayName))}</div>
+    <div class="avawrap" data-a="avatar">${avaHTML(S.me, 'ava')}<span class="ava-edit">✎</span></div>
     <div class="hi"><div class="mut sm">${greet()},</div>
       <div class="name">${esc(S.me.displayName)} ${S.me.isAdmin ? '<span class="chip adm">ADMIN</span>' : ''}</div>
       <div class="lv"><span>Lv ${L.lv}</span><div class="bar"><i style="width:${L.pct}%"></i></div><span class="mut">${L.xp} XP</span></div></div>
@@ -710,11 +726,11 @@ function viewAdmin() {
     <div class="glass stat rise" style="--i:3"><div class="v" style="color:#fcd34d">${pend.length}</div><div class="k">⏳ chờ duyệt</div></div>
   </div>
   <div class="sec">⏳ Xác nhận nộp quỹ <button class="btn ghost sm" data-a="reloadAdmin">↻ Tải lại</button></div>
-  ${pend.length ? pend.map(({ u, p }) => `<div class="glass li"><div class="uava">${esc(initials(u.displayName))}</div><div class="tx"><div class="tt">${esc(u.displayName)}</div><div class="ts">${money(p.amount)} · ${fmtDT(p.createdAt)} · ND: QUY ${esc(u.username.toUpperCase())}</div></div>
+  ${pend.length ? pend.map(({ u, p }) => `<div class="glass li">${avaHTML(u)}<div class="tx"><div class="tt">${esc(u.displayName)}</div><div class="ts">${money(p.amount)} · ${fmtDT(p.createdAt)} · ND: QUY ${esc(u.username.toUpperCase())}</div></div>
     <button class="btn ok sm" data-a="payOk" data-uid="${esc(u.uid)}" data-id="${esc(p.id)}">✓</button><button class="btn no sm" data-a="payNo" data-uid="${esc(u.uid)}" data-id="${esc(p.id)}">✕</button></div>`).join('') : `<div class="empty-msg">Không có khoản nào chờ duyệt.</div>`}
   <div class="sec">🏆 Bảng xếp hạng tuần này</div>
   ${rows.map((r, i) => `<div class="glass li urow rise" style="--i:${i + 4}" data-a="viewUser" data-uid="${esc(r.u.uid)}">
-    <div class="rank">${medal(i)}</div><div class="uava">${esc(initials(r.u.displayName))}</div>
+    <div class="rank">${medal(i)}</div>${avaHTML(r.u)}
     <div class="tx"><div class="tt">${esc(r.u.displayName)} ${r.u.isAdmin ? '<span class="chip adm">ADMIN</span>' : ''}</div>
       <div class="ts">@${esc(r.u.username)} · ${r.done}/${r.wt.length} xong · ${r.failedW} trượt</div><div class="mini"><i style="width:${r.pct}%"></i></div></div>
     <div style="text-align:right"><div class="b">${r.pct}%</div><div class="sm" style="color:${r.debt ? '#fca5a5' : '#86efac'}">${r.debt ? 'nợ ' + money(r.debt) : 'sạch nợ'}</div></div></div>`).join('')}
@@ -734,7 +750,7 @@ function userSheetHTML() {
   const hours = [...new Set(wt.map(smOf))].sort((a, b) => a - b);
   const cnt = s => wt.filter(t => status(t, now) === s).length;
   const debt = Math.max(0, fineOf(u.tasks) - paidOf(u.payments));
-  return `<div class="detail-hero"><div class="uava" style="width:56px;height:56px;font-size:20px">${esc(initials(u.displayName))}</div>
+  return `<div class="detail-hero">${avaHTML(u, 'uava', 'width:56px;height:56px;font-size:20px')}
     <div><h3>${esc(u.displayName)}</h3><div class="sm mut">@${esc(u.username)} · nợ quỹ: <b style="color:${debt ? '#fca5a5' : '#86efac'}">${money(debt)}</b></div></div></div>
   <div class="weeknav"><button class="icon-btn" data-a="uweek" data-v="-1">‹</button><div class="wk glass"><b>${fmtD(days[0])} – ${fmtD(days[6])}</b><span class="sm mut">✅ ${cnt('done')} · ❌ ${cnt('failed')} · ⏳ ${cnt('upcoming') + cnt('active') + cnt('grace')}</span></div><button class="icon-btn" data-a="uweek" data-v="1">›</button></div>
   <div class="legend"><span><i style="background:#22c55e"></i>Hoàn thành</span><span><i style="background:#ef4444"></i>Không hoàn thành</span><span><i style="background:#f59e0b"></i>Đang chờ tick</span><span><i style="background:#7b5cff"></i>Sắp tới</span></div>
@@ -802,6 +818,12 @@ function updateDeadlineBox() {
   const dlMin = endMin + g, next = dlMin >= 1440;
   $('#dlBox').innerHTML = `⏰ Tick được từ <b>${fmtHM(sm)}</b> đến chậm nhất <b>${fmtHM(dlMin % 1440)}${next ? ' hôm sau' : ''}</b>. Quá hạn không tick → ô chuyển đỏ, mất <b>${money(C.FINE_AMOUNT)}</b>.<br>Khi việc đã bắt đầu thì <b>không xoá, không sửa</b> được nữa.`;
 }
+document.addEventListener('input', e => {
+  if (e.target.closest('#avaForm') && e.target.name === 'url') {
+    const url = cleanImgUrl(e.target.value);
+    $('#avaPrev').innerHTML = avaHTML({ ...S.me, avatar:/^(https?:\/\/|data:image\/)/.test(url) ? url : '' }, 'ava bigava');
+  }
+});
 document.addEventListener('change', e => {
   const f = e.target.closest('#taskForm'); if (!f) return;
   if (e.target.name === 'dur' && $('#repBox')) {
@@ -835,6 +857,22 @@ function openDetail(t) {
    ===================================================================== */
 const A = {
   noop() {},
+  avatar() {
+    openSheet(`<h3>🖼️ Ảnh đại diện</h3>
+    <div id="avaPrev">${avaHTML(S.me, 'ava bigava')}</div>
+    <form id="avaForm">
+      <label>Link ảnh<input name="url" inputmode="url" autocapitalize="none" autocorrect="off" placeholder="Dán link ảnh vào đây" value="${esc(S.me.avatar || '')}"></label>
+      <div class="hint">📌 <b>Cách lấy link:</b> vào Google Hình ảnh, bấm vào ảnh muốn dùng để mở to.<br>• Điện thoại: <b>giữ ngón tay</b> trên ảnh → <b>Sao chép địa chỉ hình ảnh</b> (Copy image address).<br>• Máy tính: <b>chuột phải</b> vào ảnh → <b>Sao chép địa chỉ hình ảnh</b>.</div>
+      <div class="btnrow" style="margin-top:0">
+        ${S.me.avatar ? `<button type="button" class="btn no" data-a="avaRemove">Xoá ảnh</button>` : ''}
+        <button class="btn" type="submit">Lưu ảnh ✨</button>
+      </div>
+    </form>`);
+  },
+  async avaRemove() {
+    await DB.updateProfile(S.me.uid, { avatar:'' }); S.me.avatar = '';
+    closeSheet(); toast('Đã xoá ảnh đại diện', 'warn'); render();
+  },
   close() { closeSheet(); }, close2() { closeSheet(); },
   authMode(el) { S.authMode = el.dataset.v; renderAuth(); },
   async logout() { if (!confirm('Đăng xuất khỏi ứng dụng?')) return; S.admin = null; await DB.logout(); },
@@ -942,6 +980,18 @@ const FORMS = {
       toast(`🎯 Đã thêm ${n} nhiệm vụ`); burst(innerWidth / 2, innerHeight * .6, 45);
     }
     closeSheet(); render();
+  },
+  async avaForm(f, fd) {
+    const url = cleanImgUrl(fd.get('url'));
+    if (!url) return A.avaRemove();
+    if (!/^(https?:\/\/|data:image\/)/.test(url)) return toast('Link phải bắt đầu bằng https://', 'bad');
+    if (url.length > 300000) return toast('Ảnh quá lớn, hãy chọn ảnh khác', 'bad');
+    const ok = await new Promise(res => { const i = new Image(); i.referrerPolicy = 'no-referrer'; i.onload = () => res(true); i.onerror = () => res(false); i.src = url; setTimeout(() => res(false), 10000); });
+    if (!ok) return toast('Link này không phải ảnh. Hãy dùng "Sao chép địa chỉ hình ảnh"', 'bad');
+    await DB.updateProfile(S.me.uid, { avatar:url }); S.me.avatar = url;
+    closeSheet(); toast('Đã đổi ảnh đại diện 🎉');
+    const r = $('.ava')?.getBoundingClientRect(); if (r) burst(r.left + r.width / 2, r.top + r.height / 2, 60);
+    render();
   },
   async payForm(f, fd) {
     const amount = Math.round(+fd.get('amount'));
